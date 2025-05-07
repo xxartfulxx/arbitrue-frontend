@@ -9,7 +9,7 @@
   </style>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.umd.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
 </head>
 <body>
@@ -116,7 +116,7 @@
             await connection.confirmTransaction(signature, 'confirmed');
             setStatus(`Transaction confirmed: ${signature}`);
           } catch (error) {
-            setStatus(`Error: ${stopped working because of error.message}`);
+            setStatus(`Error: ${error.message}`);
             console.error('Transaction error:', error);
           }
         };
