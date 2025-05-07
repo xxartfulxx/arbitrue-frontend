@@ -7,61 +7,82 @@
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
-  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/dist/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
+  <script defer src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/dist/index.min.js"></script>
 </head>
 <body>
+  <div id="error" class="text-red-500 text-center p-4"></div>
   <div id="root"></div>
   <script type="module">
+    const errorDiv = document.getElementById('error');
+    function displayError(message) {
+      console.error(message);
+      errorDiv.innerHTML += `<p>${message}</p>`;
+    }
+
     try {
-      if (!window.React || !window.ReactDOM) {
-        console.error('React or ReactDOM not loaded');
-        throw new Error('React libraries not loaded');
+      // Check React
+      if (!window.React) {
+        displayError('React not loaded from https://unpkg.com/react@18.3.1/umd/react.production.min.js');
+        throw new Error('React not loaded');
       }
       const { useState, useMemo } = React;
+
+      // Check ReactDOM
+      if (!window.ReactDOM) {
+        displayError('ReactDOM not loaded from https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js');
+        throw new Error('ReactDOM not loaded');
+      }
+
+      // Check Borsh
+      const borsh = window.Borsh;
+      if (!borsh) {
+        displayError('Borsh not loaded from https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js');
+        throw new Error('Borsh not loaded');
+      }
+
+      // Check solanaWeb3
       const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
+      if (!solanaWeb3) {
+        displayError('solanaWeb3 not loaded from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/dist/index.min.js');
+        throw new Error('solanaWeb3 not loaded');
+      }
+
+      // Load Buffer polyfill
       let buffer;
       try {
         buffer = await import('https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm');
       } catch (e) {
-        console.error('Failed to import buffer:', e);
-        throw new Error('Buffer not loaded: ' + e.message);
+        displayError('Failed to import Buffer from https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm: ' + e.message);
+        throw new Error('Buffer not loaded');
       }
-      const borsh = window.Borsh;
-      const Buffer = window.Buffer || buffer.default.Buffer || (solanaWeb3 && solanaWeb3.Buffer);
-      if (!solanaWeb3) {
-        console.error('solanaWeb3 is undefined');
-        throw new Error('solanaWeb3 not loaded');
-      }
-      if (!borsh) {
-        console.error('borsh is undefined');
-        throw new Error('borsh not loaded');
-      }
+      const Buffer = window.Buffer || buffer.default.Buffer || solanaWeb3.Buffer;
       if (!Buffer) {
-        console.error('Buffer is undefined');
+        displayError('Buffer is undefined');
         throw new Error('Buffer not loaded');
       }
       window.Buffer = Buffer;
 
+      // Load wallet-adapter
       let walletAdapterReact, walletAdapterReactUI;
       try {
         walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
         walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
       } catch (e) {
-        console.error('Wallet-adapter import failed:', e);
-        throw new Error('Failed to load wallet-adapter: ' + e.message);
+        displayError('Failed to load wallet-adapter from CDN: ' + e.message);
+        throw new Error('Failed to load wallet-adapter');
       }
       const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
       const { WalletModalProvider, WalletMultiButton } = walletAdapterReactUI;
 
+      // Initialize Solana program
       let PROGRAM_ID;
       try {
         PROGRAM_ID = new solanaWeb3.PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
       } catch (error) {
-        console.error('Invalid PROGRAM_ID:', error);
-        document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Invalid Solana Program ID.</p>';
+        displayError('Invalid PROGRAM_ID: ' + error.message);
         throw error;
       }
       const USDC_MINT = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
@@ -128,7 +149,7 @@
             setStatus(`Transaction confirmed: ${signature}`);
           } catch (error) {
             setStatus(`Error: ${error.message}`);
-            console.error('Transaction error:', error);
+            displayError('Transaction error: ' + error.message);
           }
         };
 
@@ -147,6 +168,7 @@
             await sendInstruction({ instruction: 'Initialize' }, accounts);
           } catch (error) {
             setStatus(`Initialize error: ${error.message}`);
+            displayError('Initialize error: ' + error.message);
           }
         };
 
@@ -165,6 +187,7 @@
             await sendInstruction({ instruction: 'CreateUserAccount', data: { selfie_hash: selfieHashArray } }, accounts);
           } catch (error) {
             setStatus(`Create user account error: ${error.message}`);
+            displayError('Create user account error: ' + error.message);
           }
         };
 
@@ -187,6 +210,7 @@
             await sendInstruction({ instruction: 'DepositMint', data: { amount } }, accounts);
           } catch (error) {
             setStatus(`Deposit error: ${error.message}`);
+            displayError('Deposit error: ' + error.message);
           }
         };
 
@@ -216,6 +240,7 @@
             await sendInstruction({ instruction: 'CreateEscrow', data: { total_amount: total, item_amount: item } }, accounts);
           } catch (error) {
             setStatus(`Create escrow error: ${error.message}`);
+            displayError('Create escrow error: ' + error.message);
           }
         };
 
@@ -233,6 +258,7 @@
             await sendInstruction({ instruction: 'ConfirmDelivery', data: { proof_hash: proofHashArray } }, accounts);
           } catch (error) {
             setStatus(`Confirm delivery error: ${error.message}`);
+            displayError('Confirm delivery error: ' + error.message);
           }
         };
 
@@ -249,6 +275,7 @@
             await sendInstruction({ instruction: 'RequestReturn' }, accounts);
           } catch (error) {
             setStatus(`Request return error: ${error.message}`);
+            displayError('Request return error: ' + error.message);
           }
         };
 
@@ -287,6 +314,7 @@
             await sendInstruction({ instruction: 'ResolveEscrow', data: { refund_amount: refund } }, accounts);
           } catch (error) {
             setStatus(`Resolve escrow error: ${error.message}`);
+            displayError('Resolve escrow error: ' + error.message);
           }
         };
 
@@ -404,12 +432,12 @@
       try {
         ReactDOM.render(React.createElement(App), document.getElementById('root'));
       } catch (error) {
-        console.error('Render error:', error);
+        displayError('Render error: ' + error.message);
         document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to render application.</p>';
       }
     } catch (error) {
-      console.error('Module import error:', error);
-      document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load libraries. Check console.</p>';
+      displayError('Module import error: ' + error.message);
+      document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load libraries. Check console for details.</p>';
     }
   </script>
 </body>
