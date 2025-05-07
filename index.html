@@ -9,6 +9,7 @@
   </style>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/dist/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
 </head>
 <body>
@@ -20,17 +21,18 @@
         throw new Error('React libraries not loaded');
       }
       const { useState, useMemo } = React;
-      let solanaWeb3;
+      const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
+      let buffer;
       try {
-        solanaWeb3 = await import('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/+esm');
+        buffer = await import('https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm');
       } catch (e) {
-        console.error('Failed to import @solana/web3.js:', e);
-        throw new Error('solanaWeb3 not loaded');
+        console.error('Failed to import buffer:', e);
+        throw new Error('Buffer not loaded: ' + e.message);
       }
       const borsh = window.Borsh;
-      const Buffer = window.Buffer || (solanaWeb3.default && solanaWeb3.default.Buffer);
-      if (!solanaWeb3.default) {
-        console.error('solanaWeb3.default is undefined');
+      const Buffer = window.Buffer || buffer.default.Buffer || (solanaWeb3 && solanaWeb3.Buffer);
+      if (!solanaWeb3) {
+        console.error('solanaWeb3 is undefined');
         throw new Error('solanaWeb3 not loaded');
       }
       if (!borsh) {
@@ -56,14 +58,14 @@
 
       let PROGRAM_ID;
       try {
-        PROGRAM_ID = new solanaWeb3.default.PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
+        PROGRAM_ID = new solanaWeb3.PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
       } catch (error) {
         console.error('Invalid PROGRAM_ID:', error);
         document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Invalid Solana Program ID.</p>';
         throw error;
       }
-      const USDC_MINT = new solanaWeb3.default.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-      const TOKEN_PROGRAM = new solanaWeb3.default.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+      const USDC_MINT = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      const TOKEN_PROGRAM = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
       const schema = new Map([
         [
@@ -115,12 +117,12 @@
             return;
           }
           try {
-            const instruction = new solanaWeb3.default.TransactionInstruction({
+            const instruction = new solanaWeb3.TransactionInstruction({
               keys: accounts,
               programId: PROGRAM_ID,
               data: Buffer.from(borsh.serialize(schema, instructionData)),
             });
-            const transaction = new solanaWeb3.default.Transaction().add(instruction);
+            const transaction = new solanaWeb3.Transaction().add(instruction);
             const signature = await sendTransaction(transaction, connection);
             await connection.confirmTransaction(signature, 'confirmed');
             setStatus(`Transaction confirmed: ${signature}`);
@@ -132,15 +134,15 @@
 
         const initialize = async () => {
           try {
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: globalPda, isSigner: false, isWritable: true },
               { pubkey: publicKey, isSigner: true, isWritable: true },
               { pubkey: USDC_MINT, isSigner: false, isWritable: false },
               { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
             ];
             await sendInstruction({ instruction: 'Initialize' }, accounts);
           } catch (error) {
@@ -150,15 +152,15 @@
 
         const createUserAccount = async () => {
           try {
-            const userPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
             const selfieHashArray = new Uint8Array(32).fill(1);
             const accounts = [
               { pubkey: userPda, isSigner: false, isWritable: true },
               { pubkey: publicKey, isSigner: true, isWritable: true },
               { pubkey: USDC_MINT, isSigner: false, isWritable: false },
               { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
             ];
             await sendInstruction({ instruction: 'CreateUserAccount', data: { selfie_hash: selfieHashArray } }, accounts);
           } catch (error) {
@@ -168,11 +170,11 @@
 
         const depositMint = async () => {
           try {
-            const userPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const userUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const userUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: userPda, isSigner: false, isWritable: true },
               { pubkey: userUsdc, isSigner: false, isWritable: true },
@@ -190,13 +192,13 @@
 
         const createEscrow = async () => {
           try {
-            const buyerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const buyerUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const escrowPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('escrow'), buyerPda.toBuffer(), sellerPda.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), buyerPda.toBuffer(), sellerPda.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: buyerPda, isSigner: true, isWritable: true },
               { pubkey: buyerUsdc, isSigner: false, isWritable: true },
@@ -206,8 +208,8 @@
               { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
               { pubkey: globalPda, isSigner: false, isWritable: false },
               { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.default.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
             ];
             const total = parseInt(totalAmount) * 1_000_000;
             const item = parseInt(itemAmount) * 1_000_000;
@@ -219,9 +221,9 @@
 
         const confirmDelivery = async () => {
           try {
-            const escrowPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const proofHashArray = new Uint8Array(32).fill(2);
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
@@ -236,9 +238,9 @@
 
         const requestReturn = async () => {
           try {
-            const escrowPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const buyerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
               { pubkey: buyerPda, isSigner: true, isWritable: true },
@@ -262,14 +264,14 @@
             setStatus(`Fraud check: ${reason}`);
             if (is_fraud) return;
             */
-            const escrowPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const buyerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const buyerUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const sellerUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([new solanaWeb3.default.PublicKey(sellerPubkey).toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.default.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.default.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const sellerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([new solanaWeb3.PublicKey(sellerPubkey).toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
               { pubkey: buyerPda, isSigner: false, isWritable: true },
