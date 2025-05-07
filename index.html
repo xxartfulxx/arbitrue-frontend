@@ -8,13 +8,16 @@
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
+  <!-- Load React and ReactDOM via unpkg (UMD) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="module">
     try {
-      import React, { useState, useMemo } from 'https://esm.sh/react@18.3.1';
-      import ReactDOM from 'https://esm.sh/react-dom@18.3.1';
+      // React and ReactDOM are globally available from UMD scripts
+      const { useState, useMemo } = React;
       import * as solanaWeb3 from 'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/+esm';
       import {
         ConnectionProvider,
@@ -22,7 +25,7 @@
         useConnection,
         useWallet
       } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm';
-      import { WalletModalProvider, WalletMultiButton } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.35/+esm';
+      import { WalletModalProvider, WalletMultiButton } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm';
       import * as borsh from 'https://cdn.jsdelivr.net/npm/borsh@0.7.0/+esm';
       import { Buffer } from 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm';
       window.Buffer = Buffer;
@@ -247,7 +250,7 @@
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
               { pubkey: buyerPda, isSigner: false, isWritable: true },
-              { pubkey: buyerUsdc, isSigner: false, isWritable: czemu nie działą true },
+              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
               { pubkey: sellerPda, isSigner: false, isWritable: true },
               { pubkey: sellerUsdc, isSigner: false, isWritable: true },
               { pubkey: feeWalletPda, isSigner: false, isWritable: false },
