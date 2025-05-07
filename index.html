@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arbitrue Escrow</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAB5JREFUOE9jZKAQMFKon4GBgYHB/////4////8PAAAXewI4STkVAAAAAElFTkSuQmCC" />
+  <style>
+    *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/dist/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/dist/index.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    try {
+      const { useState, useMemo } = React;
+      const solanaWeb3 = window.SolanaWeb3;
+      const borsh = window.Borsh;
+      const { Buffer } = window.Buffer;
+      window.Buffer = Buffer;
+      if (!solanaWeb3 || !borsh || !Buffer) throw new Error('Core libraries not loaded');
+
+      let walletAdapterReact, walletAdapterReactUI;
+      try {
+        walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
+        walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
+      } catch (e) {
+        throw new Error('Failed to load wallet-adapter: ' + e.message);
+      }
+      const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
+      const { WalletModalProvider, WalletMultiButton } = walletAdapterReactUI;
+
+      let PROGRAM_ID;
+      try {
+        PROGRAM_ID = new solanaWeb3.PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
+      } catch (error) {
+        console.error('Invalid PROGRAM_ID:', error);
+        document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Invalid Solana Program ID.</p>';
+        throw error;
+      }
+      const USDC_MINT = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      const TOKEN_PROGRAM = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+
+      const schema = new Map([
+        [
+          {
+            kind: 'enum',
+            field: 'instruction',
+            values: [
+              ['Initialize'],
+              ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]]] }],
+              ['DepositMint', { kind: 'struct', fields: [['amount', 'u64']] }],
+              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'u64'], ['item_amount', 'u64']] }],
+              ['ConfirmDelivery', { kind: 'struct', fields: [['proof_hash', [32]]] }],
+              ['RequestReturn'],
+              ['ResolveEscrow', { kind: 'struct', fields: [['refund_amount', 'u64']] }],
+            ],
+          },
+          { kind: 'struct', fields: [['instruction', 'u8'], ['data', 'buffer']] },
+        ],
+      ]);
+
+      const App = () => {
+        const wallets = useMemo(() => [], []);
+        return (
+          React.createElement(ConnectionProvider, { endpoint: 'https://api.devnet.solana.com' },
+            React.createElement(WalletProvider, { wallets, autoConnect: true },
+              React.createElement(WalletModalProvider, null,
+                React.createElement(Main, null)
+              )
+            )
+          )
+        );
+      };
+
+      const Main = () => {
+        const { connection } = useConnection();
+        const { publicKey, sendTransaction } = useWallet();
+        const [selfieHash, setSelfieHash] = useState('');
+        const [depositAmount, setDepositAmount] = useState('');
+        const [totalAmount, setTotalAmount] = useState('');
+        const [itemAmount, setItemAmount] = useState('');
+        const [sellerPubkey, setSellerPubkey] = useState('');
+        const [proofHash, setProofHash] = useState('');
+        const [refundAmount, setRefundAmount] = useState('');
+        const [status, setStatus] = useState('');
+
+        const sendInstruction = async (instructionData, accounts) => {
+          if (!publicKey) {
+            setStatus('Please connect your wallet');
+            return;
+          }
+          try {
+            const instruction = new solanaWeb3.TransactionInstruction({
+              keys: accounts,
+              programId: PROGRAM_ID,
+              data: Buffer.from(borsh.serialize(schema, instructionData)),
+            });
+            const transaction = new solanaWeb3.Transaction().add(instruction);
+            const signature = await sendTransaction(transaction, connection);
+            await connection.confirmTransaction(signature, 'confirmed');
+            setStatus(`Transaction confirmed: ${signature}`);
+          } catch (error) {
+            setStatus(`Error: ${error.message}`);
+            console.error('Transaction error:', error);
+          }
+        };
+
+        const initialize = async () => {
+          try {
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const accounts = [
+              { pubkey: globalPda, isSigner: false, isWritable: true },
+              { pubkey: publicKey, isSigner: true, isWritable: true },
+              { pubkey: USDC_MINT, isSigner: false, isWritable: false },
+              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+            ];
+            await sendInstruction({ instruction: 'Initialize' }, accounts);
+          } catch (error) {
+            setStatus(`Initialize error: ${error.message}`);
+          }
+        };
+
+        const createUserAccount = async () => {
+          try {
+            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const selfieHashArray = new Uint8Array(32).fill(1);
+            const accounts = [
+              { pubkey: userPda, isSigner: false, isWritable: true },
+              { pubkey: publicKey, isSigner: true, isWritable: true },
+              { pubkey: USDC_MINT, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+            ];
+            await sendInstruction({ instruction: 'CreateUserAccount', data: { selfie_hash: selfieHashArray } }, accounts);
+          } catch (error) {
+            setStatus(`Create user account error: ${error.message}`);
+          }
+        };
+
+        const depositMint = async () => {
+          try {
+            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const userUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const accounts = [
+              { pubkey: userPda, isSigner: false, isWritable: true },
+              { pubkey: userUsdc, isSigner: false, isWritable: true },
+              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
+              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
+              { pubkey: globalPda, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+            ];
+            const amount = parseInt(depositAmount) * 1_000_000;
+            await sendInstruction({ instruction: 'DepositMint', data: { amount } }, accounts);
+          } catch (error) {
+            setStatus(`Deposit error: ${error.message}`);
+          }
+        };
+
+        const createEscrow = async () => {
+          try {
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), buyerPda.toBuffer(), sellerPda.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const accounts = [
+              { pubkey: buyerPda, isSigner: true, isWritable: true },
+              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
+              { pubkey: sellerPda, isSigner: false, isWritable: false },
+              { pubkey: escrowPda, isSigner: false, isWritable: true },
+              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
+              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
+              { pubkey: globalPda, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+            ];
+            const total = parseInt(totalAmount) * 1_000_000;
+            const item = parseInt(itemAmount) * 1_000_000;
+            await sendInstruction({ instruction: 'CreateEscrow', data: { total_amount: total, item_amount: item } }, accounts);
+          } catch (error) {
+            setStatus(`Create escrow error: ${error.message}`);
+          }
+        };
+
+        const confirmDelivery = async () => {
+          try {
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const proofHashArray = new Uint8Array(32).fill(2);
+            const accounts = [
+              { pubkey: escrowPda, isSigner: false, isWritable: true },
+              { pubkey: sellerPda, isSigner: true, isWritable: true },
+              { pubkey: globalPda, isSigner: false, isWritable: false },
+            ];
+            await sendInstruction({ instruction: 'ConfirmDelivery', data: { proof_hash: proofHashArray } }, accounts);
+          } catch (error) {
+            setStatus(`Confirm delivery error: ${error.message}`);
+          }
+        };
+
+        const requestReturn = async () => {
+          try {
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const accounts = [
+              { pubkey: escrowPda, isSigner: false, isWritable: true },
+              { pubkey: buyerPda, isSigner: true, isWritable: true },
+              { pubkey: globalPda, isSigner: false, isWritable: false },
+            ];
+            await sendInstruction({ instruction: 'RequestReturn' }, accounts);
+          } catch (error) {
+            setStatus(`Request return error: ${error.message}`);
+          }
+        };
+
+        const resolveEscrow = async () => {
+          try {
+            /*
+            const response = await fetch('/api/fraud', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ trust_score: -12, total_amount: parseInt(totalAmount) * 1_000_000, dispute_count: 3 }),
+            });
+            const { is_fraud, reason } = await response.json();
+            setStatus(`Fraud check: ${reason}`);
+            if (is_fraud) return;
+            */
+            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
+            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
+            const sellerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([new solanaWeb3.PublicKey(sellerPubkey).toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
+            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
+            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
+            const accounts = [
+              { pubkey: escrowPda, isSigner: false, isWritable: true },
+              { pubkey: buyerPda, isSigner: false, isWritable: true },
+              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
+              { pubkey: sellerPda, isSigner: false, isWritable: true },
+              { pubkey: sellerUsdc, isSigner: false, isWritable: true },
+              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
+              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
+              { pubkey: globalPda, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+            ];
+            const refund = parseInt(refundAmount) * 1_000_000;
+            await sendInstruction({ instruction: 'ResolveEscrow', data: { refund_amount: refund } }, accounts);
+          } catch (error) {
+            setStatus(`Resolve escrow error: ${error.message}`);
+          }
+        };
+
+        return React.createElement('div', { className: 'min-h-screen bg-gray-100 p-4' },
+          React.createElement('div', { className: 'max-w-4xl mx-auto' },
+            React.createElement('h1', { className: 'text-3xl font-bold text-center mb-6' }, 'Arbitrue Escrow'),
+            React.createElement('div', { className: 'flex justify-center mb-4' },
+              React.createElement(WalletMultiButton, null)
+            ),
+            React.createElement('div', { className: 'grid grid-cols-1 gap-4' },
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Initialize Program'),
+                React.createElement('button', {
+                  onClick: initialize,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Initialize')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Create User Account'),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Selfie Hash (mock)',
+                  value: selfieHash,
+                  onChange: (e) => setSelfieHash(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('button', {
+                  onClick: createUserAccount,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Create Account')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Deposit USDC'),
+                React.createElement('input', {
+                  type: 'number',
+                  placeholder: 'Amount (USDC)',
+                  value: depositAmount,
+                  onChange: (e) => setDepositAmount(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('button', {
+                  onClick: depositMint,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Deposit')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Create Escrow'),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Seller Public Key',
+                  value: sellerPubkey,
+                  onChange: (e) => setSellerPubkey(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('input', {
+                  type: 'number',
+                  placeholder: 'Total Amount (USDC)',
+                  value: totalAmount,
+                  onChange: (e) => setTotalAmount(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('input', {
+                  type: 'number',
+                  placeholder: 'Item Amount (USDC)',
+                  value: itemAmount,
+                  onChange: (e) => setItemAmount(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('button', {
+                  onClick: createEscrow,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Create Escrow')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Confirm Delivery'),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Proof Hash (mock)',
+                  value: proofHash,
+                  onChange: (e) => setProofHash(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('button', {
+                  onClick: confirmDelivery,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Confirm Delivery')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Request Return'),
+                React.createElement('button', {
+                  onClick: requestReturn,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Request Return')
+              ),
+              React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
+                React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Resolve Escrow'),
+                React.createElement('input', {
+                  type: 'number',
+                  placeholder: 'Refund Amount (USDC)',
+                  value: refundAmount,
+                  onChange: (e) => setRefundAmount(e.target.value),
+                  className: 'border p-2 w-full mb-2'
+                }),
+                React.createElement('button', {
+                  onClick: resolveEscrow,
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                }, 'Resolve Escrow')
+              )
+            ),
+            status && React.createElement('p', { className: 'mt-4 text-center text-red-500' }, status)
+          )
+        );
+      };
+
+      try {
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+      } catch (error) {
+        console.error('Render error:', error);
+        document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to render application.</p>';
+      }
+    } catch (error) {
+      console.error('Module import error:', error);
+      document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load libraries. Check console.</p>';
+    }
+  </script>
+</body>
+</html>
