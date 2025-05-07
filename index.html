@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/dist/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
-  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/buffer@0.2.0/dist/index.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -22,14 +22,26 @@
       const solanaWeb3 = window.SolanaWeb3;
       const borsh = window.Borsh;
       const Buffer = window.Buffer;
+      if (!solanaWeb3) {
+        console.error('solanaWeb3 is undefined');
+        throw new Error('solanaWeb3 not loaded');
+      }
+      if (!borsh) {
+        console.error('borsh is undefined');
+        throw new Error('borsh not loaded');
+      }
+      if (!Buffer) {
+        console.error('Buffer is undefined');
+        throw new Error('Buffer not loaded');
+      }
       window.Buffer = Buffer;
-      if (!solanaWeb3 || !borsh || !Buffer) throw new Error('Core libraries not loaded');
 
       let walletAdapterReact, walletAdapterReactUI;
       try {
         walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
         walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
       } catch (e) {
+        console.error('Wallet-adapter import failed:', e);
         throw new Error('Failed to load wallet-adapter: ' + e.message);
       }
       const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
@@ -275,7 +287,7 @@
             React.createElement('div', { className: 'flex justify-center mb-4' },
               React.createElement(WalletMultiButton, null)
             ),
-            reaccion.createElement('div', { className: 'grid grid-cols-1 gap-4' },
+            React.createElement('div', { className: 'grid grid-cols-1 gap-4' },
               React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
                 React.createElement('h2', { className: 'text-xl font-semibold mb-2' }, 'Initialize Program'),
                 React.createElement('button', {
