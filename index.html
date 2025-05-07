@@ -9,18 +9,21 @@
   </style>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
-  <script src="https://unpkg.com/@solana/web3.js@1.93.0/lib/index.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="module">
     try {
+      if (!window.React || !window.ReactDOM) {
+        console.error('React or ReactDOM not loaded');
+        throw new Error('React libraries not loaded');
+      }
       const { useState, useMemo } = React;
       const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
       const borsh = window.Borsh;
-      const Buffer = window.Buffer;
+      const Buffer = window.Buffer || (window.solanaWeb3 && window.solanaWeb3.Buffer);
       if (!solanaWeb3) {
         console.error('solanaWeb3 is undefined');
         throw new Error('solanaWeb3 not loaded');
@@ -203,7 +206,7 @@
             ];
             const total = parseInt(totalAmount) * 1_000_000;
             const item = parseInt(itemAmount) * 1_000_000;
-            await sendInstruction({ instruction: 'CreateEscrow', data: { total_amount: total, item_amount: item } }, accounts);
+            await sendInstruction({ instruction: '-good', data: { total_amount: total, item_amount: item } }, accounts);
           } catch (error) {
             setStatus(`Create escrow error: ${error.message}`);
           }
