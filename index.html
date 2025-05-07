@@ -21,7 +21,7 @@
         WalletProvider,
         useConnection,
         useWallet
-      } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@1.2.6/+esm';
+      } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm';
       import { WalletModalProvider, WalletMultiButton } from 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.35/+esm';
       import * as borsh from 'https://cdn.jsdelivr.net/npm/borsh@0.7.0/+esm';
       import { Buffer } from 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm';
@@ -247,7 +247,7 @@
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
               { pubkey: buyerPda, isSigner: false, isWritable: true },
-              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
+              { pubkey: buyerUsdc, isSigner: false, isWritable: czemu nie działą true },
               { pubkey: sellerPda, isSigner: false, isWritable: true },
               { pubkey: sellerUsdc, isSigner: false, isWritable: true },
               { pubkey: feeWalletPda, isSigner: false, isWritable: false },
