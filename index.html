@@ -10,9 +10,8 @@
   </style>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/dist/index.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/dist/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/lib/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/buffer@0.2.0/dist/index.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -21,7 +20,7 @@
       const { useState, useMemo } = React;
       const solanaWeb3 = window.SolanaWeb3;
       const borsh = window.Borsh;
-      const Buffer = window.Buffer;
+      const Buffer = window.Buffer || (window.solanaWeb3 && window.solanaWeb3.Buffer);
       if (!solanaWeb3) {
         console.error('solanaWeb3 is undefined');
         throw new Error('solanaWeb3 not loaded');
