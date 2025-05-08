@@ -10,7 +10,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js</p>';"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/umd/index.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/umd/index.min.js</p>';"></script>
 </head>
 <body>
   <div id="error" class="text-red-500 text-center p-4"></div>
@@ -83,7 +83,7 @@
       'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
       'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
       'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
-      'https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js'
+      'https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/umd/index.min.js'
     ];
     for (const cdn of cdns) {
       await checkCDN(cdn);
@@ -119,7 +119,7 @@
 
       // Check UUID
       if (!window.uuid || !window.uuid.v4) {
-        displayError('uuid.v4 not loaded from https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js');
+        displayError('uuid.v4 not loaded from https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/umd/index.min.js');
         throw new Error('uuid not loaded');
       }
 
@@ -224,6 +224,7 @@
               keys: accounts,
               programId: PROGRAM_ID,
               data: Buffer.from(borsh.serialize(schema, instructionData)),
+              );
             });
             const transaction = new solanaWeb3.Transaction().add(instruction);
             const signature = await sendTransaction(transaction, connection);
@@ -376,11 +377,7 @@
               { pubkey: buyerPda, isSigner: false, isWritable: true },
               { pubkey: buyerUsdc, isSigner: false, isWritable: true },
               { pubkey: sellerPda, isSigner: false, isWritable: true },
-              { pubkey: sellerUsdc, isSigner: false, isWritable: true },
-              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
+              { pubkey: sellerUsdc, isSigner: false, isWritable:/tasks
             ];
             const refund = parseInt(refundAmount) * 1_000_000;
             await sendInstruction({ instruction: 'ResolveEscrow', data: { refund_amount: refund } }, accounts);
