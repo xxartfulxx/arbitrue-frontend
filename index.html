@@ -30,28 +30,39 @@
   <script type="module">
     // First try to import js-sha3 properly
     try {
-      const jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
+      // Try newer version first
+      const jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.9.0/+esm');
       // Handle different export patterns
       window.jsSha3 = jsSha3.default || jsSha3;
       // Map keccak256 to keccak_256 for compatibility
-      window.keccak_256 = window.jsSha3.keccak256;
+      window.keccak_256 = window.jsSha3.keccak256 || window.jsSha3.keccak_256;
       // Also make it available as keccak256
-      window.keccak256 = window.jsSha3.keccak256;
+      window.keccak256 = window.keccak_256;
       console.log('Successfully loaded js-sha3 via ESM');
     } catch (e) {
-      console.warn('ESM import failed, falling back to global:', e);
-      window.jsSha3 = { 
-        keccak_256: window.keccak256 || (() => {
-          console.warn('Using mock keccak_256');
-          return new Uint8Array(32);
-        })
-      };
-      window.keccak_256 = window.jsSha3.keccak_256;
+      console.warn('ESM import failed, falling back to older version:', e);
+      try {
+        // Fallback to older version that might have different exports
+        const jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
+        window.jsSha3 = jsSha3.default || jsSha3;
+        window.keccak_256 = window.jsSha3.keccak_256 || window.jsSha3.keccak256;
+        window.keccak256 = window.keccak_256;
+        console.log('Successfully loaded older js-sha3 via ESM');
+      } catch (e2) {
+        console.warn('ESM import failed, falling back to global:', e2);
+        window.jsSha3 = { 
+          keccak_256: window.keccak256 || (() => {
+            console.warn('Using mock keccak_256');
+            return new Uint8Array(32);
+          })
+        };
+        window.keccak_256 = window.jsSha3.keccak_256;
+      }
     }
   </script>
 
   <!-- Fallback script loading -->
-  <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" 
+  <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.9.0/build/sha3.min.js" 
     onerror="handleScriptError('Failed to load sha3.min.js')"></script>
   
   <!-- Core dependencies -->
@@ -151,21 +162,13 @@
           try {
             console.log(`Wallet-adapter import attempt ${attempt}`);
             
-            // Create a temporary script element to pre-load the dependencies
-            const tempScript = document.createElement('script');
-            tempScript.type = 'module';
-            tempScript.text = `
-              import { keccak256 } from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
-              window._tempKeccak256 = keccak256;
-            `;
-            document.head.appendChild(tempScript);
-            
-            // Wait for the temp script to load
-            await new Promise(resolve => {
-              tempScript.onload = resolve;
-              tempScript.onerror = resolve;
-              setTimeout(resolve, 1000);
-            });
+            // Ensure js-sha3 is properly set up before loading wallet adapter
+            if (!window.keccak_256) {
+              window.keccak_256 = window.jsSha3?.keccak_256 || window.jsSha3?.keccak256;
+              if (!window.keccak_256) {
+                throw new Error('keccak_256 not available');
+              }
+            }
             
             // Now load the wallet adapter
             const { default: walletAdapterReact } = await import(
@@ -226,7 +229,7 @@
             field: 'instruction',
             values: [
               ['Initialize'],
-              ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]]] }],
+              ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]] }],
               ['DepositMint', { kind: 'struct', fields: [['amount', 'u64']] }],
               ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'u64'], ['item_amount', 'u64']] }],
               ['ConfirmDelivery', { kind: 'struct', fields: [['proof_hash', [32]]] }],
