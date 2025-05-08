@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arbitrue Escrow</title>
-  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/styles.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.10/styles.min.css" rel="stylesheet">
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
@@ -34,11 +34,10 @@
     };
     Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js'); loadScript('https://unpkg.com/uuid-js@0.7.5/lib/uuid.min.js', 'Failed to load fallback uuid from https://unpkg.com/uuid-js@0.7.5/lib/uuid.min.js')"></script>
+  <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js'); window.uuid = { v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }) }; Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });"></script>
   <script>
     window.addEventListener('load', () => {
-      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js');
-      window.uuid = window.UUID || window.uuid;
+      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');
       if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
         console.warn('UUID v4 not properly defined, applying mock');
         window.uuid = {
@@ -47,9 +46,9 @@
             return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
           })
         };
+        Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
       }
-      Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
-      console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
+      console.log('UUID initialized:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
     });
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="handleScriptError('Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js')"></script>
@@ -132,9 +131,9 @@
         'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
         'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
-        'https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.15/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/+esm'
+        'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.10/+esm',
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.10/+esm'
       ];
       for (const cdn of cdns) {
         await checkCDN(cdn);
@@ -201,6 +200,7 @@
       async function loadWalletAdapterWithRetry(maxAttempts = 20, delayMs = 300) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           if (!window.uuid || !window.uuid.v4) {
+            console.warn('Restoring window.uuid');
             window.uuid = {
               v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
                 const r = Math.random() * 16 | 0;
@@ -212,10 +212,10 @@
           console.log(`Wallet-adapter import attempt ${attempt}: UUID:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
           try {
             console.log('UUID before import:', window.uuid, window.uuid.v4);
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.15/+esm');
-            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/+esm');
-            console.log('UUID after import:', window.uuid, window.uuid?.v4);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.10/+esm');
+            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.10/+esm');
+            console.log('UUID after import:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
             console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
             return { walletAdapterReact, walletAdapterReactUI };
           } catch (e) {
@@ -269,7 +269,7 @@
               ['Initialize'],
               ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]]] }],
               ['DepositMint', { kind: 'struct', fields: [['amount', 'u64']] }],
-              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'uixos64'], ['item_amount', 'u64']] }],
+              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'u64'], ['item_amount', 'u64']] }],
               ['ConfirmDelivery', { kind: 'struct', fields: [['proof_hash', [32]]] }],
               ['RequestReturn'],
               ['ResolveEscrow', { kind: 'struct', fields: [['refund_amount', 'u64']] }],
@@ -599,7 +599,7 @@
         document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to render application.</p>';
       }
     } catch (error) {
-      displayError('Script error: ' + error.message);
+      displayError('Script error: ' + error.message + ' (Check console for stack trace)');
       document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load application. Check console for details.</p>';
     }
   </script>
