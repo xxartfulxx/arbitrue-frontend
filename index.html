@@ -93,8 +93,8 @@
       'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
       'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
       'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
-      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/lib/cjs/index.min.js',
-      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/lib/cjs/index.min.js'
+      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm',
+      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm'
     ];
     for (const cdn of cdns) {
       await checkCDN(cdn);
