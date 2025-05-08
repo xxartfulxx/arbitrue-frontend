@@ -24,19 +24,21 @@
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
       })
     };
-    window.assert = window.assert || function (condition, message) {
-      if (!condition) throw new Error(message || 'Assertion failed');
+    window.assert = window.assert || {
+      ok: (condition, message) => { if (!condition) throw new Error(message || 'Assertion failed'); },
+      strictEqual: (actual, expected, message) => { if (actual !== expected) throw new Error(message || `Expected ${expected}, but got ${actual}`); },
+      assert: (condition, message) => { if (!condition) throw new Error(message || 'Assertion failed'); }
     };
     console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-    console.log('assert initialized:', window.assert, typeof window.assert);
+    console.log('assert initialized:', window.assert, window.assert.ok, window.assert.strictEqual, typeof window.assert);
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/assert@2.0.0/build/assert.min.js" onerror="handleScriptError('Failed to load assert from https://cdn.jsdelivr.net/npm/assert@2.0.0/build/assert.min.js');"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js" onerror="handleScriptError('Failed to load assert from https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js');"></script>
   <script>
     window.addEventListener('load', () => {
       console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-      console.log('assert initialized:', window.assert, typeof window.assert);
+      console.log('assert initialized:', window.assert, window.assert.ok, window.assert.strictEqual, typeof window.assert);
       if (!window.jsSha3 || !window.jsSha3.keccak_256 || window.jsSha3.keccak_256.toString().includes('Mock')) {
         console.warn('js-sha3.keccak_256 not set or using mock, updating with window.keccak256');
         window.jsSha3 = window.jsSha3 || {};
@@ -132,7 +134,7 @@
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js',
         'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
         'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js',
-        'https://cdn.jsdelivr.net/npm/assert@2.0.0/build/assert.min.js',
+        'https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.0/+esm',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.0/+esm'
       ];
