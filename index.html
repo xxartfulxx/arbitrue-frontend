@@ -8,10 +8,22 @@
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
   <script>
+    // CommonJS polyfill for browser
+    window.exports = window.exports || {};
+    window.module = window.module || { exports: {} };
     window.loadModule = async function(src, errorMessage) {
       try {
-        const module = await import(src);
-        return module;
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        document.head.appendChild(script);
+        return new Promise((resolve, reject) => {
+          script.onload = () => resolve(window.borsh);
+          script.onerror = () => {
+            document.getElementById('error').innerHTML += `<p>${errorMessage}</p>`;
+            reject(new Error(errorMessage));
+          };
+        });
       } catch (e) {
         document.getElementById('error').innerHTML += `<p>${errorMessage}</p>`;
         throw e;
@@ -35,8 +47,8 @@
     // Pre-check CDN availability
     async function checkCDN(url) {
       try {
-        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-        return true;
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok;
       } catch (e) {
         displayError(`CDN check failed for ${url}: ${e.message}`);
         return false;
@@ -46,7 +58,7 @@
     const cdns = [
       'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
       'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
-      'https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.3.0/+esm',
+      'https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js',
       'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'
     ];
     for (const cdn of cdns) {
@@ -70,21 +82,25 @@
       // Load and check Borsh
       let borsh;
       try {
-        const borshModule = await window.loadModule('https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.3.0/+esm', 'Failed to load Borsh from https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.3.0/+esm. Attempting fallback...');
-        window.borsh = borshModule;
-        borsh = window.borsh;
+        borsh = await window.loadModule(
+          'https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js',
+          'Failed to load Borsh from https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js. Attempting fallback...'
+        );
+        window.borsh = borsh || window.borsh;
       } catch (e) {
         try {
-          const fallbackModule = await window.loadModule('https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.2.0/+esm', 'Failed to load fallback Borsh from https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.2.0/+esm');
-          window.borsh = fallbackModule;
-          borsh = window.borsh;
+          borsh = await window.loadModule(
+            'https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.31.1/lib/index.js',
+            'Failed to load fallback Borsh from https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.31.1/lib/index.js'
+          );
+          window.borsh = borsh || window.borsh;
         } catch (e) {
-          displayError('Borsh not loaded from https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.3.0/+esm or fallback');
+          displayError('Borsh not loaded from https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js or fallback');
           throw new Error('Borsh not loaded');
         }
       }
-      if (!borsh) {
-        displayError('Borsh is undefined');
+      if (!borsh || !borsh.serialize || !borsh.deserialize) {
+        displayError('Borsh is undefined or missing serialize/deserialize');
         throw new Error('Borsh not loaded');
       }
 
@@ -326,16 +342,6 @@
 
         const resolveEscrow = async () => {
           try {
-            /*
-            const response = await fetch('/api/fraud', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ trust_score: -12, total_amount: parseInt(totalAmount) * 1_000_000, dispute_count: 3 }),
-            });
-            const { is_fraud, reason } = await response.json();
-            setStatus(`Fraud check: ${reason}`);
-            if (is_fraud) return;
-            */
             const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
             const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
             const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
@@ -430,7 +436,7 @@
                 }),
                 React.createElement('button', {
                   onClick: createEscrow,
-                  className: 'bg runny blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
+                  className: 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600'
                 }, 'Create Escrow')
               ),
               React.createElement('div', { className: 'bg-white p-4 rounded shadow' },
