@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><!DOCTYPE html>
-<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arbitrue Escrow</title>
-  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.20/styles.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/styles.min.css" rel="stylesheet">
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
@@ -27,17 +25,28 @@
       if (errorDiv) errorDiv.innerHTML += `<p>Script error: ${event.message} at ${event.filename}:${event.lineno}</p>`;
     });
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js'); loadScript('https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js', 'Failed to load fallback uuid from https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js')"></script>
+  <script>
+    window.uuid = window.uuid || {
+      v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      })
+    };
+    Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js'); loadScript('https://unpkg.com/uuid-js@0.7.5/lib/uuid.min.js', 'Failed to load fallback uuid from https://unpkg.com/uuid-js@0.7.5/lib/uuid.min.js')"></script>
   <script>
     window.addEventListener('load', () => {
-      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');
+      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js');
+      window.uuid = window.UUID || window.uuid;
       if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
         console.warn('UUID v4 not properly defined, applying mock');
-        window.uuid = window.uuid || {};
-        window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
+        window.uuid = {
+          v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          })
+        };
       }
       Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
       console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
@@ -51,6 +60,7 @@
   <div id="error" class="text-red-500 text-center p-4"></div>
   <div id="root"></div>
   <script type="module">
+    console.log('Before module code');
     const errorDiv = document.getElementById('error');
     function displayError(message) {
       console.error(message);
@@ -67,6 +77,7 @@
       }
 
       // Mock Borsh implementation
+      console.log('Before borsh.serialize');
       window.borsh = {
         serialize: (schema, obj) => {
           const buffer = new Uint8Array(1024);
@@ -103,6 +114,7 @@
           return { instruction: buffer[0], data: {} };
         }
       };
+      console.log('After borsh.serialize');
 
       // Pre-check CDN availability
       async function checkCDN(url) {
@@ -120,9 +132,9 @@
         'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
         'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
-        'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.20/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.20/+esm'
+        'https://cdn.jsdelivr.net/npm/uuid-js@0.7.5/lib/uuid.min.js',
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.15/+esm',
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/+esm'
       ];
       for (const cdn of cdns) {
         await checkCDN(cdn);
@@ -159,11 +171,12 @@
       console.log('UUID status:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
       if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
         console.warn('uuid.v4 not loaded, relying on mock');
-        window.uuid = window.uuid || {};
-        window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
+        window.uuid = {
+          v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          })
+        };
         Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
       }
       console.log('UUID loaded:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
@@ -184,25 +197,31 @@
       window.Buffer = Buffer;
 
       // Load wallet-adapter with retry
+      console.log('Before wallet-adapter import');
       async function loadWalletAdapterWithRetry(maxAttempts = 20, delayMs = 300) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          if (!window.uuid) window.uuid = {};
-          if (!window.uuid.v4) window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-          });
+          if (!window.uuid || !window.uuid.v4) {
+            window.uuid = {
+              v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+              })
+            };
+            Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
+          }
           console.log(`Wallet-adapter import attempt ${attempt}: UUID:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
           try {
             console.log('UUID before import:', window.uuid, window.uuid.v4);
             await new Promise(resolve => setTimeout(resolve, 100));
-            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.20/+esm');
-            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.20/+esm');
+            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.15/+esm');
+            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.15/+esm');
             console.log('UUID after import:', window.uuid, window.uuid?.v4);
             console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
             return { walletAdapterReact, walletAdapterReactUI };
           } catch (e) {
             console.error(`Wallet-adapter import failed on attempt ${attempt}: ${e.message}`);
-            throw e;
+            if (attempt === maxAttempts) throw e;
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           }
         }
         throw new Error('uuid.v4 not available after retries');
@@ -218,6 +237,7 @@
         console.error('Wallet-adapter import error:', e);
         throw new Error('Failed to load wallet-adapter');
       }
+      console.log('After wallet-adapter import');
       const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
       if (!ConnectionProvider || !WalletProvider || !useConnection || !useWallet) {
         displayError('Wallet-adapter-react missing expected exports');
@@ -249,478 +269,7 @@
               ['Initialize'],
               ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]]] }],
               ['DepositMint', { kind: 'struct', fields: [['amount', 'u64']] }],
-              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'u64'], ['item_amount', 'u64']] }],
-              ['ConfirmDelivery', { kind: 'struct', fields: [['proof_hash', [32]]] }],
-              ['RequestReturn'],
-              ['ResolveEscrow', { kind: 'struct', fields: [['refund_amount', 'u64']] }],
-            ],
-          },
-          { kind: 'struct', fields: [['instruction', 'u8'], ['data', 'buffer']] },
-        ],
-      ]);
-
-      const App = () => {
-        const wallets = useMemo(() => [], []);
-        return (
-          React.createElement(ConnectionProvider, { endpoint: 'https://api.devnet.solana.com' },
-            React.createElement(WalletProvider, { wallets, autoConnect: true },
-              React.createElement(WalletModalProvider, null,
-                React.createElement(Main, null)
-              )
-            )
-          )
-        );
-      };
-
-      const Main = () => {
-        const { connection } = useConnection();
-        const { publicKey, sendTransaction } = useWallet();
-        const [selfieHash, setSelfieHash] = useState('');
-        const [depositAmount, setDepositAmount] = useState('');
-        const [totalAmount, setTotalAmount] = useState('');
-        const [itemAmount, setItemAmount] = useState('');
-        const [sellerPubkey, setSellerPubkey] = useState('');
-        const [proofHash, setProofHash] = useState('');
-        const [refundAmount, setRefundAmount] = useState('');
-        const [status, setStatus] = useState('');
-
-        const sendInstruction = async (instructionData, accounts) => {
-          if (!publicKey) {
-            setStatus('Please connect your wallet');
-            return;
-          }
-          try {
-            const instruction = new solanaWeb3.TransactionInstruction({
-              keys: accounts,
-              programId: PROGRAM_ID,
-              data: Buffer.from(borsh.serialize(schema, instructionData))
-            });
-            const transaction = new solanaWeb3.Transaction().add(instruction);
-            const signature = await sendTransaction(transaction, connection);
-            await connection.confirmTransaction(signature, 'confirmed');
-            setStatus(`Transaction confirmed: ${signature}`);
-          } catch (error) {
-            setStatus(`Error: ${error.message}`);
-            displayError('Transaction error: ' + error.message);
-          }
-        };
-
-        const initialize = async () => {
-          try {
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const accounts = [
-              { pubkey: globalPda, isSigner: false, isWritable: true },
-              { pubkey: publicKey, isSigner: true, isWritable: true },
-              { pubkey: USDC_MINT, isSigner: false, isWritable: false },
-              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-            ];
-            await sendInstruction({ instruction: 'Initialize' }, accounts);
-          } catch (error) {
-            setStatus(`Initialize error: ${error.message}`);
-            displayError('Initialize error: ' + error.message);
-          }
-        };
-
-        const createUserAccount = async () => {
-          try {
-            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const selfieHashArray = new Uint8Array(32).fill(1);
-            const accounts = [
-              { pubkey: userPda, isSigner: false, isWritable: true },
-              { pubkey: publicKey, isSigner: true, isWritable: true },
-              { pubkey: USDC_MINT, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-            ];
-            await sendInstruction({ instruction: 'CreateUserAccount', data: { selfie_hash: selfieHashArray } }, accounts);
-          } catch (error) {
-            setStatus(`Create user account error: ${error.message}`);
-            displayError('Create user account error: ' + error.message);
-          }
-        };
-
-        const depositMint = async () => {
-          try {
-            const userPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const userUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const accounts = [
-              { pubkey: userPda, isSigner: false, isWritable: true },
-              { pubkey: userUsdc, isSigner: false, isWritable: true },
-              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-            ];
-            const amount = parseInt(depositAmount) * 1_000_000;
-            await sendInstruction({ instruction: 'DepositMint', data: { amount } }, accounts);
-          } catch (error) {
-            setStatus(`Deposit error: ${error.message}`);
-            displayError('Deposit error: ' + error.message);
-          }
-        };
-
-        const createEscrow = async () => {
-          try {
-            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), buyerPda.toBuffer(), sellerPda.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const accounts = [
-              { pubkey: buyerPda, isSigner: true, isWritable: true },
-              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
-              { pubkey: sellerPda, isSigner: false, isWritable: false },
-              { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-            ];
-            const total = parseInt(totalAmount) * 1_000_000;
-            const item = parseInt(itemAmount) * 1_000_000;
-            await sendInstruction({ instruction: 'CreateEscrow', data: { total_amount: total, item_amount: item } }, accounts);
-          } catch (error) {
-            setStatus(`Create escrow error: ${error.message}`);
-            displayError('Create escrow error: ' + error.message);
-          }
-        };
-
-        const confirmDelivery = async () => {
-          try {
-            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const proofHashArray = new Uint8Array(32).fill(2);
-            const accounts = [
-              { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: sellerPda, isSigner: true, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-            ];
-            await sendInstruction({ instruction: 'ConfirmDelivery', data: { proof_hash: proofHashArray } }, accounts);
-          } catch (error) {
-            setStatus(`Confirm delivery error: ${error.message}`);
-            displayError('Confirm delivery error: ' + error.message);
-          }
-        };
-
-        const requestReturn = async () => {
-          try {
-            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const accounts = [
-              { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: buyerPda, isSigner: true, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-            ];
-            await sendInstruction({ instruction: 'RequestReturn' }, accounts);
-          } catch (error) {
-            setStatus(`Request return error: ${error.message}`);
-            displayError('Request return error: ' + error.message);
-          }
-        };
-
-        const resolveEscrow = async () => {
-          try {
-            const escrowPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('escrow'), publicKey.toBuffer(), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const buyerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), publicKey.toBuffer()], PROGRAM_ID)[0];
-            const buyerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([publicKey.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const sellerPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('user'), new solanaWeb3.PublicKey(sellerPubkey).toBuffer()], PROGRAM_ID)[0];
-            const sellerUsdc = solanaWeb3.PublicKey.findProgramAddressSync([new solanaWeb3.PublicKey(sellerPubkey).toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const feeWalletPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID)[0];
-            const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
-            const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
-            const accounts = [
-              { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: buyerPda, isSigner: false, isWritable: true },
-              { pubkey: buyerUsdc, isSigner: false, isWritable: true },
-              { pubkey: sellerPda, isSigner: false, isWritable: true },
-              { pubkey: sellerUsdc, isSigner: false, isWritable: true },
-              { pubkey: feeWalletPda, isSigner: false, isWritable: false },
-              { pubkey: feeWalletUsdc, isSigner: false, isWritable: true },
-              { pubkey: globalPda, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-            ];
-            const refund = parseInt(refundAmount) * 1_000_000;
-            await sendInstruction({ instruction: 'ResolveEscrow', data: { refund_amount: refund } }, accounts);
-          } catch (error) {
-            setStatus(`Resolve escrow error: ${error.message}`);
-            displayError('Resolve escrow error: ' + error.message);
-          }
-        };
-
-        try {
-          console.log('Rendering App');
-          ReactDOM.render(React.createElement(App), document.getElementById('root'));
-        } catch (renderError) {
-          displayError('Render error: ' + renderError.message);
-          document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to render application.</p>';
-        }
-      } catch (error) {
-        displayError('Script error: ' + error.message);
-        document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load application. Check console for details.</p>';
-      }
-    } catch (error) {
-      console.error('Outer script error: ' + error.message);
-      document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load application. Check console for details.</p>';
-    }
-  </script>
-</body>
-</html>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arbitrue Escrow</title>
-  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/styles.min.css" rel="stylesheet">
-  <style>
-    *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
-  </style>
-  <script>
-    function handleScriptError(message) {
-      const errorDiv = document.getElementById('error');
-      if (errorDiv) errorDiv.innerHTML += `<p>${message}</p>`;
-      else console.error(message);
-    }
-    function loadScript(url, errorMessage) {
-      const script = document.createElement('script');
-      script.src = url;
-      script.onerror = () => handleScriptError(errorMessage);
-      document.head.appendChild(script);
-    }
-    window.addEventListener('error', (event) => {
-      const errorDiv = document.getElementById('error');
-      if (errorDiv) errorDiv.innerHTML += `<p>Script error: ${event.message} at ${event.filename}:${event.lineno}</p>`;
-    });
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js'); loadScript('https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js', 'Failed to load fallback uuid from https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js')"></script>
-  <script>
-    window.addEventListener('load', () => {
-      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');
-      if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
-        console.warn('UUID v4 not properly defined, applying mock');
-        window.uuid = window.uuid || {};
-        window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-      }
-      console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-    });
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="handleScriptError('Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js')"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="handleScriptError('Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js')"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="handleScriptError('Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'); loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js')"></script>
-</head>
-<body>
-  <div id="error" class="text-red-500 text-center p-4"></div>
-  <div id="root"></div>
-  <script type="module">
-    try {
-      const errorDiv = document.getElementById('error');
-      function displayError(message) {
-        console.error(message);
-        if (errorDiv) errorDiv.innerHTML += `<p>${message}</p>`;
-      }
-
-      // Polyfill window.crypto.randomUUID
-      if (!window.crypto || !window.crypto.randomUUID) {
-        window.crypto = window.crypto || {};
-        window.crypto.randomUUID = function() {
-          return window.uuid.v4();
-        };
-      }
-
-      // Mock Borsh implementation
-      window.borsh = {
-        serialize: (schema, obj) => {
-          const buffer = new Uint8Array(1024);
-          let offset = 0;
-          if (obj.instruction === 'Initialize') {
-            buffer[offset++] = 0;
-          } else if (obj.instruction === 'CreateUserAccount') {
-            buffer[offset++] = 1;
-            for (let i = 0; i < 32; i++) buffer[offset++] = obj.data.selfie_hash[i] || 0;
-          } else if (obj.instruction === 'DepositMint') {
-            buffer[offset++] = 2;
-            const amount = BigInt(obj.data.amount);
-            for (let i = 0; i < 8; i++) buffer[offset++] = Number((amount >> BigInt(i * 8)) & BigInt(0xFF));
-          } else if (obj.instruction === 'CreateEscrow') {
-            console.log('borsh.serialize: CreateEscrow');
-            buffer[offset++] = 3;
-            const total = BigInt(obj.data.total_amount);
-            const item = BigInt(obj.data.item_amount);
-            for (let i = 0; i < 8; i++) buffer[offset++] = Number((total >> BigInt(i * 8)) & BigInt(0xFF));
-            for (let i = 0; i < 8; i++) buffer[offset++] = Number((item >> BigInt(i * 8)) & BigInt(0xFF));
-          } else if (obj.instruction === 'ConfirmDelivery') {
-            buffer[offset++] = 4;
-            for (let i = 0; i < 32; i++) buffer[offset++] = obj.data.proof_hash[i] || 0;
-          } else if (obj.instruction === 'RequestReturn') {
-            buffer[offset++] = 5;
-          } else if (obj.instruction === 'ResolveEscrow') {
-            buffer[offset++] = 6;
-            const refund = BigInt(obj.data.refund_amount);
-            for (let i = 0; i < 8; i++) buffer[offset++] = Number((refund >> BigInt(i * 8)) & BigInt(0xFF));
-          }
-          return buffer.slice(0, offset);
-        },
-        deserialize: (schema, buffer) => {
-          return { instruction: buffer[0], data: {} };
-        }
-      };
-
-      // Pre-check CDN availability
-      async function checkCDN(url) {
-        try {
-          const response = await fetch(url, { method: 'HEAD' });
-          if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-          return true;
-        } catch (e) {
-          displayError(`CDN check failed for ${url}: ${e.message}`);
-          return false;
-        }
-      }
-
-      const cdns = [
-        'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
-        'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
-        'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm'
-      ];
-      for (const cdn of cdns) {
-        await checkCDN(cdn);
-      }
-
-      // Check React
-      if (!window.React) {
-        displayError('React not loaded from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js');
-        throw new Error('React not loaded');
-      }
-      const { useState, useMemo } = React;
-
-      // Check ReactDOM
-      if (!window.ReactDOM) {
-        displayError('ReactDOM not loaded from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js');
-        throw new Error('ReactDOM not loaded');
-      }
-
-      // Check Borsh
-      const borsh = window.borsh;
-      if (!borsh || !borsh.serialize || !borsh.deserialize) {
-        displayError('Borsh is undefined or missing serialize/deserialize');
-        throw new Error('Borsh not loaded');
-      }
-
-      // Check solanaWeb3
-      const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
-      if (!solanaWeb3) {
-        displayError('solanaWeb3 not loaded from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js or fallback');
-        throw new Error('solanaWeb3 not loaded');
-      }
-
-      // Check UUID
-      console.log('UUID status:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
-      if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
-        console.warn('uuid.v4 not loaded, relying on mock');
-        window.uuid = window.uuid || {};
-        window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-      }
-      console.log('UUID loaded:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-
-      // Load Buffer polyfill
-      let buffer;
-      try {
-        buffer = await import('https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm');
-      } catch (e) {
-        displayError('Failed to import Buffer from https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm: ' + e.message);
-        throw new Error('Buffer not loaded');
-      }
-      const Buffer = window.Buffer || buffer.default.Buffer || solanaWeb3.Buffer;
-      if (!Buffer) {
-        displayError('Buffer is undefined');
-        throw new Error('Buffer not loaded');
-      }
-      window.Buffer = Buffer;
-
-      // Load wallet-adapter with retry
-      async function loadWalletAdapterWithRetry(maxAttempts = 20, delayMs = 300) {
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          if (!window.uuid) window.uuid = {};
-          if (!window.uuid.v4) window.uuid.v4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-          });
-          console.log(`Attempt ${attempt}: UUID ready:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
-          try {
-            console.log('UUID before import:', window.uuid, window.uuid.v4);
-            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
-            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
-            console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
-            return { walletAdapterReact, walletAdapterReactUI };
-          } catch (e) {
-            console.error(`Wallet-adapter import failed on attempt ${attempt}: ${e.message}`);
-            throw e;
-          }
-        }
-        throw new Error('uuid.v4 not available after retries');
-      }
-
-      let walletAdapterReact, walletAdapterReactUI;
-      try {
-        const result = await loadWalletAdapterWithRetry();
-        walletAdapterReact = result.walletAdapterReact;
-        walletAdapterReactUI = result.walletAdapterReactUI;
-      } catch (e) {
-        displayError('Failed to load wallet-adapter from CDN: ' + e.message + ' (Check console for stack trace)');
-        console.error('Wallet-adapter import error:', e);
-        throw new Error('Failed to load wallet-adapter');
-      }
-      const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
-      if (!ConnectionProvider || !WalletProvider || !useConnection || !useWallet) {
-        displayError('Wallet-adapter-react missing expected exports');
-        throw new Error('Wallet-adapter-react incomplete');
-      }
-      const { WalletModalProvider, WalletMultiButton } = walletAdapterReactUI;
-      if (!WalletModalProvider || !WalletMultiButton) {
-        displayError('Wallet-adapter-react-ui missing expected exports');
-        throw new Error('Wallet-adapter-react-ui incomplete');
-      }
-
-      // Initialize Solana program
-      let PROGRAM_ID;
-      try {
-        PROGRAM_ID = new solanaWeb3.PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
-      } catch (error) {
-        displayError('Invalid PROGRAM_ID: ' + error.message);
-        throw error;
-      }
-      const USDC_MINT = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-      const TOKEN_PROGRAM = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-
-      const schema = new Map([
-        [
-          {
-            kind: 'enum',
-            field: 'instruction',
-            values: [
-              ['Initialize'],
-              ['CreateUserAccount', { kind: 'struct', fields: [['selfie_hash', [32]]] }],
-              ['DepositMint', { kind: 'struct', fields: [['amount', 'u64']] }],
-              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'u64'], ['item_amount', 'u64']] }],
+              ['CreateEscrow', { kind: 'struct', fields: [['total_amount', 'uixos64'], ['item_amount', 'u64']] }],
               ['ConfirmDelivery', { kind: 'struct', fields: [['proof_hash', [32]]] }],
               ['RequestReturn'],
               ['ResolveEscrow', { kind: 'struct', fields: [['refund_amount', 'u64']] }],
