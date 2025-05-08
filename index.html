@@ -18,8 +18,8 @@
   </script>
   <script defer src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://unpkg.com/react@18.3.1/umd/react.production.min.js</p>';"></script>
   <script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/borsh@0.7.0/dist/borsh.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load Borsh from https://cdn.jsdelivr.net/npm/borsh@0.7.0/dist/borsh.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/borsh@0.6.0/dist/borsh.min.js', 'Failed to load fallback Borsh from https://cdn.jsdelivr.net/npm/borsh@0.6.0/dist/borsh.min.js');"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.93.0/dist/index.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.93.0/dist/index.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/dist/index.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/dist/index.min.js');"></script>
+  <script defer src="https://unpkg.com/@coral-xyz/borsh@0.3.0/dist/index.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load Borsh from https://unpkg.com/@coral-xyz/borsh@0.3.0/dist/index.min.js. Attempting fallback...</p>'; window.loadScript('https://unpkg.com/@coral-xyz/borsh@0.2.0/dist/index.min.js', 'Failed to load fallback Borsh from https://unpkg.com/@coral-xyz/borsh@0.2.0/dist/index.min.js');"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');"></script>
 </head>
 <body>
   <div id="error" class="text-red-500 text-center p-4"></div>
@@ -35,7 +35,6 @@
     async function checkCDN(url) {
       try {
         const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-        // no-cors returns opaque response, so we can't check status reliably
         return true;
       } catch (e) {
         displayError(`CDN check failed for ${url}: ${e.message}`);
@@ -46,8 +45,8 @@
     const cdns = [
       'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
       'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
-      'https://cdn.jsdelivr.net/npm/borsh@0.7.0/dist/borsh.min.js',
-      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.93.0/dist/index.min.js'
+      'https://unpkg.com/@coral-xyz/borsh@0.3.0/dist/index.min.js',
+      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'
     ];
     for (const cdn of cdns) {
       await checkCDN(cdn);
@@ -68,16 +67,16 @@
       }
 
       // Check Borsh
-      const borsh = window.Borsh;
+      const borsh = window.borsh;
       if (!borsh) {
-        displayError('Borsh not loaded from https://cdn.jsdelivr.net/npm/borsh@0.7.0/dist/borsh.min.js or fallback');
+        displayError('Borsh not loaded from https://unpkg.com/@coral-xyz/borsh@0.3.0/dist/index.min.js or fallback');
         throw new Error('Borsh not loaded');
       }
 
       // Check solanaWeb3
       const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
       if (!solanaWeb3) {
-        displayError('solanaWeb3 not loaded from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.93.0/dist/index.min.js or fallback');
+        displayError('solanaWeb3 not loaded from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js or fallback');
         throw new Error('solanaWeb3 not loaded');
       }
 
