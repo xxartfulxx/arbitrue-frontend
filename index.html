@@ -94,7 +94,7 @@
             const total = BigInt(obj.data.total_amount);
             const item = BigInt(obj.data.item_amount);
             for (let i = 0; i < 8; i++) buffer[offset++] = Number((total >> BigInt(i * 8)) & BigInt(0xFF));
-            for (let i = 0; i < 8; i++) buffer[offset++] = Number((item >> BigInt(i * 8)) & BigInt(0xFF);
+            for (let i = 0; i < 8; i++) buffer[offset++] = Number((item >> BigInt(i * 8)) & BigInt(0xFF));
           } else if (obj.instruction === 'ConfirmDelivery') {
             buffer[offset++] = 4;
             for (let i = 0; i < 32; i++) buffer[offset++] = obj.data.proof_hash[i] || 0;
