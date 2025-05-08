@@ -37,11 +37,11 @@
     }) };
   </script>
   <script type="module">
-    import { keccak256 } from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
+    import { keccak_256 } from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
     window.jsSha3 = window.jsSha3 || {};
-    window.jsSha3.keccak_256 = keccak256;
-    window.keccak_256 = keccak256;
-    console.log('js-sha3 shim:', keccak256, typeof keccak256);
+    window.jsSha3.keccak_256 = keccak_256;
+    window.keccak_256 = keccak_256;
+    console.log('js-sha3 shim:', keccak_256, typeof keccak_256);
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js'); window.uuid = window.uuid || { v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }) }; Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });"></script>
@@ -180,7 +180,9 @@
       }
 
       // Check UUID
-      console.log('UUID status:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
+      console.log('UUID
+
+ status:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
       if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
         console.warn('uuid.v4 not loaded, relying on mock');
         window.uuid = {
