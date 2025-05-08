@@ -25,66 +25,61 @@
       })
     };
   </script>
+
+  <!-- Load js-sha3 first with proper export handling -->
   <script type="module">
-    let jsSha3;
+    // First try to import js-sha3 properly
     try {
-      jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
-      jsSha3 = jsSha3.default && Object.keys(jsSha3.default).length === 0 ? {} : jsSha3;
+      const jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
+      // Handle different export patterns
+      window.jsSha3 = jsSha3.default || jsSha3;
+      // Map keccak256 to keccak_256 for compatibility
+      window.keccak_256 = window.jsSha3.keccak256;
+      // Also make it available as keccak256
+      window.keccak256 = window.jsSha3.keccak256;
+      console.log('Successfully loaded js-sha3 via ESM');
     } catch (e) {
-      console.error('js-sha3 ESM import failed:', e);
-      jsSha3 = {};
+      console.warn('ESM import failed, falling back to global:', e);
+      window.jsSha3 = { 
+        keccak_256: window.keccak256 || (() => {
+          console.warn('Using mock keccak_256');
+          return new Uint8Array(32);
+        })
+      };
+      window.keccak_256 = window.jsSha3.keccak_256;
     }
-    window.jsSha3 = Object.assign({}, jsSha3);
-    window.jsSha3.keccak_256 = jsSha3.keccak256 || window.keccak256 || ((input) => {
-      console.warn('Mock keccak_256 used');
-      return new Uint8Array(32).fill(0);
-    });
-    window.keccak_256 = window.jsSha3.keccak_256;
-    console.log('js-sha3 shim:', jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
-  <script>
-    window.addEventListener('load', () => {
-      console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-      if (!window.jsSha3 || !window.jsSha3.keccak_256) {
-        console.warn('js-sha3.keccak_256 not set, using window.keccak256 fallback');
-        window.jsSha3 = window.jsSha3 || {};
-        window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
-          console.warn('Mock keccak_256 used');
-          return new Uint8Array(32).fill(0);
-        });
-      }
-      console.log('js-sha3 window.keccak256:', window.keccak256, typeof window.keccak256);
-      console.log('js-sha3 window.jsSha3:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
-    });
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="handleScriptError('Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js')"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="handleScriptError('Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js')"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js" onerror="handleScriptError('Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js')"></script>
+
+  <!-- Fallback script loading -->
+  <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" 
+    onerror="handleScriptError('Failed to load sha3.min.js')"></script>
+  
+  <!-- Core dependencies -->
+  <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js"></script>
 </head>
 <body>
   <div id="error" class="text-red-500 text-center p-4"></div>
   <div id="root"></div>
+
   <script type="module">
-    console.log('Before module code');
+    console.log('Starting application initialization');
     const errorDiv = document.getElementById('error');
+    
     function displayError(message) {
       console.error(message);
       if (errorDiv) errorDiv.innerHTML += `<p>${message}</p>`;
     }
 
     try {
-      // Polyfill window.crypto.randomUUID
-      if (!window.crypto || !window.crypto.randomUUID) {
-        window.crypto = window.crypto || {};
-        window.crypto.randomUUID = function() {
-          return window.uuid.v4();
-        };
+      // Polyfill window.crypto.randomUUID if needed
+      if (!window.crypto.randomUUID) {
+        window.crypto.randomUUID = window.uuid.v4;
       }
 
       // Mock Borsh implementation
-      console.log('Before borsh.serialize');
+      console.log('Initializing Borsh');
       window.borsh = {
         serialize: (schema, obj) => {
           const buffer = new Uint8Array(1024);
@@ -121,125 +116,70 @@
           return { instruction: buffer[0], data: {} };
         }
       };
-      console.log('After borsh.serialize');
 
-      // Pre-check CDN availability
-      async function checkCDN(url) {
-        try {
-          const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-          return response.ok;
-        } catch (e) {
-          console.warn(`CDN check skipped for ${url}: ${e.message}`);
-          return true;
-        }
-      }
-
-      console.log('Before CDN check');
-      const cdns = [
-        'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
-        'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js',
-        'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
-        'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js',
-        'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm'
-      ];
-      console.log('CDN array defined:', cdns);
-      for (const cdn of cdns) {
-        console.log('Checking CDN:', cdn);
-        await checkCDN(cdn);
-      }
-      console.log('After CDN check');
-
-      // Check React
+      // Check core dependencies
       if (!window.React) {
-        displayError('React not loaded from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js');
         throw new Error('React not loaded');
       }
       const { useState, useMemo } = React;
 
-      // Check ReactDOM
       if (!window.ReactDOM) {
-        displayError('ReactDOM not loaded from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js');
         throw new Error('ReactDOM not loaded');
       }
 
-      // Check Borsh
-      const borsh = window.borsh;
-      if (!borsh || !borsh.serialize || !borsh.deserialize) {
-        displayError('Borsh is undefined or missing serialize/deserialize');
-        throw new Error('Borsh not loaded');
-      }
-
-      // Check solanaWeb3
       const solanaWeb3 = window.solanaWeb3 || window.SolanaWeb3;
       if (!solanaWeb3) {
-        displayError('solanaWeb3 not loaded from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');
         throw new Error('solanaWeb3 not loaded');
       }
 
-      // Check UUID
-      console.log('UUID status:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-      if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
-        console.warn('uuid.v4 not loaded, relying on mock');
-        window.uuid = {
-          v4: () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-          })
-        };
-      }
-      console.log('UUID loaded:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-
-      // Check js-sha3
-      console.log('js-sha3 window.keccak256:', window.keccak256, typeof window.keccak256);
-      console.log('js-sha3 window.jsSha3:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
-      if (!window.jsSha3 || !window.jsSha3.keccak_256) {
-        console.warn('js-sha3.keccak_256 not set, using window.keccak256 fallback');
+      // Ensure js-sha3 is available
+      if (!window.jsSha3?.keccak_256) {
         window.jsSha3 = window.jsSha3 || {};
-        window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
-          console.warn('Mock keccak_256 used');
-          return new Uint8Array(32).fill(0);
-        });
+        window.jsSha3.keccak_256 = window.keccak256 || (() => new Uint8Array(32));
       }
 
-      // Load Buffer polyfill
-      let buffer;
-      try {
-        buffer = await import('https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm');
-      } catch (e) {
-        displayError('Failed to import Buffer from https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm: ' + e.message);
-        throw new Error('Buffer not loaded');
+      // Force the correct export name if needed
+      if (window.jsSha3?.keccak256 && !window.jsSha3.keccak_256) {
+        window.jsSha3.keccak_256 = window.jsSha3.keccak256;
       }
-      const Buffer = window.Buffer || buffer.default.Buffer || solanaWeb3.Buffer;
-      if (!Buffer) {
-        displayError('Buffer is undefined');
-        throw new Error('Buffer not loaded');
-      }
-      window.Buffer = Buffer;
+      window.keccak_256 = window.keccak_256 || window.jsSha3?.keccak_256;
 
       // Load wallet-adapter with retry
       console.log('Before wallet-adapter import');
       async function loadWalletAdapterWithRetry(maxAttempts = 5, delayMs = 1000) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          console.log('Validating dependencies:', window.uuid, window.uuid.v4, typeof window.uuid.v4, !!window.crypto?.randomUUID);
-          console.log(`Wallet-adapter import attempt ${attempt}: UUID:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
           try {
-            console.log('UUID before import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-            console.log('Importing wallet-adapter:', 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
-            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
-            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm');
-            console.log('UUID after import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-            console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
+            console.log(`Wallet-adapter import attempt ${attempt}`);
+            
+            // Create a temporary script element to pre-load the dependencies
+            const tempScript = document.createElement('script');
+            tempScript.type = 'module';
+            tempScript.text = `
+              import { keccak256 } from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
+              window._tempKeccak256 = keccak256;
+            `;
+            document.head.appendChild(tempScript);
+            
+            // Wait for the temp script to load
+            await new Promise(resolve => {
+              tempScript.onload = resolve;
+              tempScript.onerror = resolve;
+              setTimeout(resolve, 1000);
+            });
+            
+            // Now load the wallet adapter
+            const { default: walletAdapterReact } = await import(
+              'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm'
+            );
+            const { default: walletAdapterReactUI } = await import(
+              'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm'
+            );
+            
             return { walletAdapterReact, walletAdapterReactUI };
-          } catch (e) {
-            console.error(`Wallet-adapter import failed on attempt ${attempt}: ${e.message}`);
-            if (e.message.includes('keccak_256')) {
-              console.warn('Retrying due to keccak_256 import issue');
-            }
-            if (attempt === maxAttempts) throw e;
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+          } catch (error) {
+            console.error(`Wallet-adapter import failed on attempt ${attempt}:`, error);
+            if (attempt === maxAttempts) throw error;
+            await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
           }
         }
         throw new Error('Wallet-adapter not available after retries');
@@ -251,10 +191,11 @@
         walletAdapterReact = result.walletAdapterReact;
         walletAdapterReactUI = result.walletAdapterReactUI;
       } catch (e) {
-        displayError('Failed to load wallet-adapter from CDN: ' + e.message + ' (Check console for stack trace)');
+        displayError('Failed to load wallet-adapter from CDN: ' + e.message);
         console.error('Wallet-adapter import error:', e);
         throw new Error('Failed to load wallet-adapter');
       }
+      
       console.log('After wallet-adapter import');
       const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
       if (!ConnectionProvider || !WalletProvider || !useConnection || !useWallet) {
