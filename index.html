@@ -26,11 +26,21 @@
     };
   </script>
   <script type="module">
-    import * as jsSha3 from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
-    window.jsSha3 = jsSha3;
-    window.keccak_256 = jsSha3.keccak256;
-    window.jsSha3.keccak_256 = jsSha3.keccak256;
-    console.log('js-sha3 shim:', jsSha3, jsSha3.keccak256, typeof jsSha3.keccak256);
+    let jsSha3;
+    try {
+      jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
+      jsSha3 = jsSha3.default && Object.keys(jsSha3.default).length === 0 ? {} : jsSha3;
+    } catch (e) {
+      console.error('js-sha3 ESM import failed:', e);
+      jsSha3 = {};
+    }
+    window.jsSha3 = Object.assign({}, jsSha3);
+    window.jsSha3.keccak_256 = jsSha3.keccak256 || window.keccak256 || ((input) => {
+      console.warn('Mock keccak_256 used');
+      return new Uint8Array(32).fill(0);
+    });
+    window.keccak_256 = window.jsSha3.keccak_256;
+    console.log('js-sha3 shim:', jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
@@ -449,7 +459,7 @@
             const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: buyerP at isSigner: true, isWritable: true },
+              { pubkey: buyerPda, isSigner: true, isWritable: true },
               { pubkey: globalPda, isSigner: false, isWritable: false },
             ];
             await sendInstruction({ instruction: 'RequestReturn' }, accounts);
