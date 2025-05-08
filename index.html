@@ -26,21 +26,13 @@
     };
   </script>
   <script type="module">
-    let jsSha3;
-    try {
-      jsSha3 = await import('https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm');
-      jsSha3 = jsSha3.default && Object.keys(jsSha3.default).length === 0 ? {} : jsSha3;
-    } catch (e) {
-      console.error('js-sha3 ESM import failed:', e);
-      jsSha3 = {};
-    }
-    window.jsSha3 = Object.assign({}, jsSha3);
-    window.jsSha3.keccak_256 = jsSha3.keccak256 || window.keccak256 || ((input) => {
+    window.jsSha3 = window.jsSha3 || {};
+    window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
       console.warn('Mock keccak_256 used');
       return new Uint8Array(32).fill(0);
     });
     window.keccak_256 = window.jsSha3.keccak_256;
-    console.log('js-sha3 shim:', jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
+    console.log('js-sha3 shim:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
@@ -141,7 +133,6 @@
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js',
         'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
         'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js',
-        'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm'
       ];
@@ -218,6 +209,12 @@
         throw new Error('Buffer not loaded');
       }
       window.Buffer = Buffer;
+
+      // Set global keccak_256 shim
+      window.keccak_256 = window.keccak_256 || window.keccak256 || ((input) => {
+        console.warn('Mock keccak_256 used');
+        return new Uint8Array(32).fill(0);
+      });
 
       // Load wallet-adapter with retry
       console.log('Before wallet-adapter import');
