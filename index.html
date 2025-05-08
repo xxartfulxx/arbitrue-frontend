@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arbitrue Escrow</title>
-  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/styles.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.0/styles.min.css" rel="stylesheet">
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
@@ -25,27 +25,19 @@
       })
     };
   </script>
-  <script type="module">
-    window.jsSha3 = window.jsSha3 || {};
-    window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
-      console.warn('Mock keccak_256 used');
-      return new Uint8Array(32).fill(0);
-    });
-    window.keccak_256 = window.jsSha3.keccak_256;
-    console.log('js-sha3 shim:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
-  </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
   <script>
     window.addEventListener('load', () => {
       console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-      if (!window.jsSha3 || !window.jsSha3.keccak_256) {
-        console.warn('js-sha3.keccak_256 not set, using window.keccak256 fallback');
+      if (!window.jsSha3 || !window.jsSha3.keccak_256 || window.jsSha3.keccak_256.toString().  includes('Mock')) {
+        console.warn('js-sha3.keccak_256 not set or using mock, updating with window.keccak256');
         window.jsSha3 = window.jsSha3 || {};
         window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
           console.warn('Mock keccak_256 used');
           return new Uint8Array(32).fill(0);
         });
+        window.keccak_256 = window.jsSha3.keccak_256;
       }
       console.log('js-sha3 window.keccak256:', window.keccak256, typeof window.keccak256);
       console.log('js-sha3 window.jsSha3:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
@@ -133,8 +125,8 @@
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js',
         'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
         'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm',
-        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm'
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.0/+esm',
+        'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.0/+esm'
       ];
       console.log('CDN array defined:', cdns);
       for (const cdn of cdns) {
@@ -186,14 +178,6 @@
       // Check js-sha3
       console.log('js-sha3 window.keccak256:', window.keccak256, typeof window.keccak256);
       console.log('js-sha3 window.jsSha3:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
-      if (!window.jsSha3 || !window.jsSha3.keccak_256) {
-        console.warn('js-sha3.keccak_256 not set, using window.keccak256 fallback');
-        window.jsSha3 = window.jsSha3 || {};
-        window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
-          console.warn('Mock keccak_256 used');
-          return new Uint8Array(32).fill(0);
-        });
-      }
 
       // Load Buffer polyfill
       let buffer;
@@ -210,12 +194,6 @@
       }
       window.Buffer = Buffer;
 
-      // Set global keccak_256 shim
-      window.keccak_256 = window.keccak_256 || window.keccak256 || ((input) => {
-        console.warn('Mock keccak_256 used');
-        return new Uint8Array(32).fill(0);
-      });
-
       // Load wallet-adapter with retry
       console.log('Before wallet-adapter import');
       async function loadWalletAdapterWithRetry(maxAttempts = 5, delayMs = 1000) {
@@ -224,9 +202,9 @@
           console.log(`Wallet-adapter import attempt ${attempt}: UUID:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
           try {
             console.log('UUID before import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-            console.log('Importing wallet-adapter:', 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
-            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
-            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm');
+            console.log('Importing wallet-adapter:', 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.0/+esm');
+            const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.0/+esm');
+            const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.0/+esm');
             console.log('UUID after import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
             console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
             return { walletAdapterReact, walletAdapterReactUI };
