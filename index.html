@@ -7,6 +7,15 @@
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js</p>';"></script>
+  <script>
+    if (!window.uuid || !window.uuid.v4) {
+      window.uuid = { v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      }) };
+    }
+  </script>
   <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');"></script>
@@ -19,23 +28,6 @@
     function displayError(message) {
       console.error(message);
       errorDiv.innerHTML += `<p>${message}</p>`;
-    }
-
-    // Load UUID script dynamically
-    async function loadUUIDScript() {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js';
-        script.onload = () => resolve();
-        script.onerror = () => {
-          const fallbackScript = document.createElement('script');
-          fallbackScript.src = 'https://unpkg.com/uuid@8.3.2/dist/umd/uuid.min.js';
-          fallbackScript.onload = () => resolve();
-          fallbackScript.onerror = () => reject(new Error('Failed to load UUID from both CDNs'));
-          document.head.appendChild(fallbackScript);
-        };
-        document.head.appendChild(script);
-      });
     }
 
     // Polyfill window.crypto.randomUUID
@@ -87,7 +79,7 @@
     async function checkCDN(url) {
       try {
         const response = await fetch(url, { method: 'HEAD' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
         return true;
       } catch (e) {
         displayError(`CDN check failed for ${url}: ${e.message}`);
@@ -98,29 +90,16 @@
     const cdns = [
       'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
       'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
-      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'
+      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
+      'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
+      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.18.0/dist/index.js',
+      'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.12.0/dist/index.js'
     ];
     for (const cdn of cdns) {
       await checkCDN(cdn);
     }
 
     try {
-      // Load UUID script
-      try {
-        await loadUUIDScript();
-        console.log('UUID script loaded successfully');
-      } catch (e) {
-        displayError('Failed to load UUID script: ' + e.message);
-        throw new Error('UUID script not loaded');
-      }
-
-      // Check UUID
-      if (!window.uuid || !window.uuid.v4) {
-        displayError('uuid.v4 not loaded from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js or fallback');
-        throw new Error('uuid not loaded');
-      }
-      console.log('UUID loaded:', window.uuid, window.uuid.v4);
-
       // Check React
       if (!window.React) {
         displayError('React not loaded from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js');
@@ -148,6 +127,13 @@
         throw new Error('solanaWeb3 not loaded');
       }
 
+      // Check UUID
+      if (!window.uuid || !window.uuid.v4) {
+        displayError('uuid.v4 not loaded from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');
+        throw new Error('uuid not loaded');
+      }
+      console.log('UUID loaded:', window.uuid, window.uuid.v4);
+
       // Load Buffer polyfill
       let buffer;
       try {
@@ -163,16 +149,19 @@
       }
       window.Buffer = Buffer;
 
-      // Load wallet-adapter with retry
+      // Load wallet-adapter with retry and fallback
       async function loadWalletAdapterWithRetry(maxAttempts = 10, delayMs = 200) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           if (window.uuid && window.uuid.v4) {
             try {
+              const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.18.0/dist/index.js');
+              const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.12.0/dist/index.js');
+              return { walletAdapterReact, walletAdapterReactUI };
+            } catch (e) {
+              console.warn(`Primary wallet-adapter import failed: ${e.message}. Attempting fallback...`);
               const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
               const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
               return { walletAdapterReact, walletAdapterReactUI };
-            } catch (e) {
-              throw e;
             }
           }
           console.log(`Attempt ${attempt}: Waiting for uuid.v4 to be defined...`);
@@ -187,6 +176,7 @@
         const result = await loadWalletAdapterWithRetry();
         walletAdapterReact = result.walletAdapterReact;
         walletAdapterReactUI = result.walletAdapterReactUI;
+        console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
       } catch (e) {
         displayError('Failed to load wallet-adapter from CDN: ' + e.message + ' (Check console for stack trace)');
         console.error('Wallet-adapter import error:', e);
@@ -549,11 +539,11 @@
         ReactDOM.render(React.createElement(App), document.getElementById('root'));
       } catch (error) {
         displayError('Render error: ' + error.message);
-        document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to render application.</p>';
+        document.getElementById('root').innerHTML = '<p className="text-red-500 text-center">Error: Failed to render application.</p>';
       }
     } catch (error) {
       displayError('Module import error: ' + error.message);
-      document.getElementById('root').innerHTML = '<p class="text-red-500 text-center">Error: Failed to load libraries. Check console for details.</p>';
+      document.getElementById('root').innerHTML = '<p className="text-red-500 text-center">Error: Failed to load libraries. Check console for details.</p>';
     }
   </script>
 </body>
