@@ -10,6 +10,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/umd/uuid.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/umd/uuid.min.js</p>';"></script>
 </head>
 <body>
   <div id="error" class="text-red-500 text-center p-4"></div>
@@ -19,6 +20,14 @@
     function displayError(message) {
       console.error(message);
       errorDiv.innerHTML += `<p>${message}</p>`;
+    }
+
+    // Polyfill window.crypto.randomUUID
+    if (!window.crypto || !window.crypto.randomUUID) {
+      window.crypto = window.crypto || {};
+      window.crypto.randomUUID = function() {
+        return window.uuid.v4();
+      };
     }
 
     // Mock Borsh implementation
@@ -73,7 +82,8 @@
     const cdns = [
       'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
       'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
-      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'
+      'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js',
+      'https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/umd/uuid.min.js'
     ];
     for (const cdn of cdns) {
       await checkCDN(cdn);
@@ -107,6 +117,12 @@
         throw new Error('solanaWeb3 not loaded');
       }
 
+      // Check UUID
+      if (!window.uuid || !window.uuid.v4) {
+        displayError('uuid.v4 not loaded from https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/umd/uuid.min.js');
+        throw new Error('uuid not loaded');
+      }
+
       // Load Buffer polyfill
       let buffer;
       try {
@@ -128,11 +144,20 @@
         walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.38/+esm');
         walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.38/+esm');
       } catch (e) {
-        displayError('Failed to load wallet-adapter from CDN: ' + e.message);
+        displayError('Failed to load wallet-adapter from CDN: ' + e.message + ' (Check console for stack trace)');
+        console.error('Wallet-adapter import error:', e);
         throw new Error('Failed to load wallet-adapter');
       }
       const { ConnectionProvider, WalletProvider, useConnection, useWallet } = walletAdapterReact;
+      if (!ConnectionProvider || !WalletProvider || !useConnection || !useWallet) {
+        displayError('Wallet-adapter-react missing expected exports');
+        throw new Error('Wallet-adapter-react incomplete');
+      }
       const { WalletModalProvider, WalletMultiButton } = walletAdapterReactUI;
+      if (!WalletModalProvider || !WalletMultiButton) {
+        displayError('Wallet-adapter-react-ui missing expected exports');
+        throw new Error('Wallet-adapter-react-ui incomplete');
+      }
 
       // Initialize Solana program
       let PROGRAM_ID;
