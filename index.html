@@ -456,7 +456,7 @@
             const feeWalletUsdc = solanaWeb3.PublicKey.findProgramAddressSync([feeWalletPda.toBuffer(), USDC_MINT.toBuffer()], PROGRAM_ID)[0];
             const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
-              { pubkey: escrowPda, isSigner: false, isWritable: rusoft
+              { pubkey: escrowPda, isSigner: false, isWritable: true },
               { pubkey: buyerPda, isSigner: false, isWritable: true },
               { pubkey: buyerUsdc, isSigner: false, isWritable: true },
               { pubkey: sellerPda, isSigner: false, isWritable: true },
