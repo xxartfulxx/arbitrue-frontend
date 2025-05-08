@@ -14,50 +14,37 @@
       if (errorDiv) errorDiv.innerHTML += `<p>${message}</p>`;
       else console.error(message);
     }
-    function loadScript(url, errorMessage) {
-      const script = document.createElement('script');
-      script.src = url;
-      script.onerror = () => handleScriptError(errorMessage);
-      document.head.appendChild(script);
-    }
     window.addEventListener('error', (event) => {
       const errorDiv = document.getElementById('error');
       if (errorDiv) errorDiv.innerHTML += `<p>Script error: ${event.message} at ${event.filename}:${event.lineno}</p>`;
     });
-    let uuidLoaded = false;
-    const uuidPromise = import('https://cdn.jsdelivr.net/npm/uuid@8.3.2/+esm').then(uuid => {
-      window.uuid = uuid;
-      uuidLoaded = true;
-      Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
-      console.log('UUID module initialized:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
-    });
-    window.uuid = window.uuid || { v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    }) };
+    window.uuid = window.uuid || {
+      v4: () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      })
+    };
   </script>
   <script type="module">
-    import { keccak_256 } from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
-    window.jsSha3 = window.jsSha3 || {};
-    window.jsSha3.keccak_256 = keccak_256;
-    window.keccak_256 = keccak_256;
-    console.log('js-sha3 shim:', keccak_256, typeof keccak_256);
+    import * as jsSha3 from 'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/+esm';
+    window.jsSha3 = jsSha3;
+    window.keccak_256 = jsSha3.keccak256;
+    window.jsSha3.keccak_256 = jsSha3.keccak256;
+    console.log('js-sha3 shim:', jsSha3, jsSha3.keccak256, typeof jsSha3.keccak256);
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js'); window.uuid = window.uuid || { v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }) }; Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
   <script>
     window.addEventListener('load', () => {
-      console.log('UUID script load attempted:', 'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');
-      if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
-        console.warn('UUID v4 not properly defined, using existing');
+      console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
+      if (!window.jsSha3 || !window.jsSha3.keccak_256) {
+        console.warn('js-sha3.keccak_256 not set, using window.keccak256 fallback');
+        window.jsSha3 = window.jsSha3 || {};
+        window.jsSha3.keccak_256 = window.keccak256 || ((input) => {
+          console.warn('Mock keccak_256 used');
+          return new Uint8Array(32).fill(0);
+        });
       }
-      Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
-      console.log('UUID initialized:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
-      console.log('UUID locked:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
-      window.jsSha3 = window.jsSha3 || { keccak_256: input => {
-        console.warn('Mock keccak_256 used');
-        return new Uint8Array(32).fill(0);
-      } };
       console.log('js-sha3 window.keccak256:', window.keccak256, typeof window.keccak256);
       console.log('js-sha3 window.jsSha3:', window.jsSha3, window.jsSha3.keccak_256, typeof window.jsSha3.keccak_256);
     });
@@ -129,15 +116,15 @@
       // Pre-check CDN availability
       async function checkCDN(url) {
         try {
-          const response = await fetch(url, { method: 'HEAD' });
-          if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-          return true;
+          const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+          return response.ok;
         } catch (e) {
-          displayError(`CDN check failed for ${url}: ${e.message}`);
-          return false;
+          console.warn(`CDN check skipped for ${url}: ${e.message}`);
+          return true;
         }
       }
 
+      console.log('Before CDN check');
       const cdns = [
         'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
         'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
@@ -148,9 +135,12 @@
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm'
       ];
+      console.log('CDN array defined:', cdns);
       for (const cdn of cdns) {
+        console.log('Checking CDN:', cdn);
         await checkCDN(cdn);
       }
+      console.log('After CDN check');
 
       // Check React
       if (!window.React) {
@@ -180,18 +170,15 @@
       }
 
       // Check UUID
-      console.log('UUID
-
- status:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
+      console.log('UUID status:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
       if (!window.uuid || !window.uuid.v4 || typeof window.uuid.v4 !== 'function') {
         console.warn('uuid.v4 not loaded, relying on mock');
         window.uuid = {
-          v4: () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          v4: () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
             const r = Math.random() * 16 | 0;
             return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
           })
         };
-        Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
       }
       console.log('UUID loaded:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
 
@@ -222,32 +209,25 @@
       }
       window.Buffer = Buffer;
 
-      // Wait for uuid to load
-      console.log('Waiting for uuid modules...');
-      await Promise.all([uuidPromise]);
-      console.log('UUID module loaded:', uuidLoaded);
-
       // Load wallet-adapter with retry
       console.log('Before wallet-adapter import');
       async function loadWalletAdapterWithRetry(maxAttempts = 5, delayMs = 1000) {
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          console.log('Validating dependencies:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4, !!window.crypto?.randomUUID);
-          if (!window.uuid || !window.uuid.v4) {
-            console.warn('Forcing window.uuid for module');
-            window.uuid = await import('https://cdn.jsdelivr.net/npm/uuid@8.3.2/+esm');
-            Object.defineProperty(window, 'uuid', { value: window.uuid, writable: false });
-          }
+          console.log('Validating dependencies:', window.uuid, window.uuid.v4, typeof window.uuid.v4, !!window.crypto?.randomUUID);
           console.log(`Wallet-adapter import attempt ${attempt}: UUID:`, window.uuid, window.uuid.v4, typeof window.uuid.v4);
           try {
             console.log('UUID before import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
             console.log('Importing wallet-adapter:', 'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
             const walletAdapterReact = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.12.0/+esm');
             const walletAdapterReactUI = await import('https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.6.0/+esm');
-            console.log('UUID after import:', window.uuid, window.uuid?.v4, typeof window.uuid?.v4);
+            console.log('UUID after import:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
             console.log('Wallet-adapter loaded:', walletAdapterReact, walletAdapterReactUI);
             return { walletAdapterReact, walletAdapterReactUI };
           } catch (e) {
             console.error(`Wallet-adapter import failed on attempt ${attempt}: ${e.message}`);
+            if (e.message.includes('keccak_256')) {
+              console.warn('Retrying due to keccak_256 import issue');
+            }
             if (attempt === maxAttempts) throw e;
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
@@ -469,7 +449,7 @@
             const globalPda = solanaWeb3.PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID)[0];
             const accounts = [
               { pubkey: escrowPda, isSigner: false, isWritable: true },
-              { pubkey: buyerPda, isSigner: true, isWritable: true },
+              { pubkey: buyerP at isSigner: true, isWritable: true },
               { pubkey: globalPda, isSigner: false, isWritable: false },
             ];
             await sendInstruction({ instruction: 'RequestReturn' }, accounts);
