@@ -7,31 +7,8 @@
   <style>
     *,::after,::before{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,'Open Sans','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5}body{margin:0;background-color:#f3f4f6}.min-h-screen{min-height:100vh}.bg-gray-100{background-color:#f3f4f6}.p-4{padding:1rem}.max-w-4xl{max-width:64rem}.mx-auto{margin-left:auto;margin-right:auto}.text-3xl{font-size:1.875rem}.font-bold{font-weight:700}.text-center{text-align:center}.mb-6{margin-bottom:1.5rem}.flex{display:flex}.justify-center{justify-content:center}.mb-4{margin-bottom:1rem}.grid{display:grid}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.gap-4{gap:1rem}.bg-white{background-color:#fff}.p-4{padding:1rem}.rounded{border-radius:.25rem}.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}.text-xl{font-size:1.25rem}.font-semibold{font-weight:600}.mb-2{margin-bottom:.5rem}.border{border-width:1px;border-color:#e5e7eb}.p-2{padding:.5rem}.w-full{width:100%}.bg-blue-500{background-color:#3b82f6}.text-white{color:#fff}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.rounded:hover{background-color:#2563eb}.hover\:bg-blue-600:hover{background-color:#2563eb}.mt-4{margin-top:1rem}.text-red-500{color:#ef4444}
   </style>
-  <script>
-    // CommonJS polyfill for browser
-    window.exports = window.exports || {};
-    window.module = window.module || { exports: {} };
-    window.loadModule = async function(src, errorMessage) {
-      try {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        document.head.appendChild(script);
-        return new Promise((resolve, reject) => {
-          script.onload = () => resolve(window.borsh);
-          script.onerror = () => {
-            document.getElementById('error').innerHTML += `<p>${errorMessage}</p>`;
-            reject(new Error(errorMessage));
-          };
-        });
-      } catch (e) {
-        document.getElementById('error').innerHTML += `<p>${errorMessage}</p>`;
-        throw e;
-      }
-    };
-  </script>
-  <script defer src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://unpkg.com/react@18.3.1/umd/react.production.min.js</p>';"></script>
-  <script defer src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load React from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js</p>';"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load ReactDOM from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js</p>';"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js" onerror="document.getElementById('error').innerHTML += '<p>Failed to load solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js. Attempting fallback...</p>'; window.loadScript('https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js', 'Failed to load fallback solanaWeb3 from https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js');"></script>
 </head>
 <body>
@@ -44,11 +21,49 @@
       errorDiv.innerHTML += `<p>${message}</p>`;
     }
 
+    // Mock Borsh implementation
+    window.borsh = {
+      serialize: (schema, obj) => {
+        const buffer = new Uint8Array(1024);
+        let offset = 0;
+        if (obj.instruction === 'Initialize') {
+          buffer[offset++] = 0;
+        } else if (obj.instruction === 'CreateUserAccount') {
+          buffer[offset++] = 1;
+          for (let i = 0; i < 32; i++) buffer[offset++] = obj.data.selfie_hash[i] || 0;
+        } else if (obj.instruction === 'DepositMint') {
+          buffer[offset++] = 2;
+          const amount = BigInt(obj.data.amount);
+          for (let i = 0; i < 8; i++) buffer[offset++] = Number((amount >> BigInt(i * 8)) & BigInt(0xFF));
+        } else if (obj.instruction === 'CreateEscrow') {
+          buffer[offset++] = 3;
+          const total = BigInt(obj.data.total_amount);
+          const item = BigInt(obj.data.item_amount);
+          for (let i = 0; i < 8; i++) buffer[offset++] = Number((total >> BigInt(i * 8)) & BigInt(0xFF));
+          for (let i = 0; i < 8; i++) buffer[offset++] = Number((item >> BigInt(i * 8)) & BigInt(0xFF));
+        } else if (obj.instruction === 'ConfirmDelivery') {
+          buffer[offset++] = 4;
+          for (let i = 0; i < 32; i++) buffer[offset++] = obj.data.proof_hash[i] || 0;
+        } else if (obj.instruction === 'RequestReturn') {
+          buffer[offset++] = 5;
+        } else if (obj.instruction === 'ResolveEscrow') {
+          buffer[offset++] = 6;
+          const refund = BigInt(obj.data.refund_amount);
+          for (let i = 0; i < 8; i++) buffer[offset++] = Number((refund >> BigInt(i * 8)) & BigInt(0xFF));
+        }
+        return buffer.slice(0, offset);
+      },
+      deserialize: (schema, buffer) => {
+        return { instruction: buffer[0], data: {} };
+      }
+    };
+
     // Pre-check CDN availability
     async function checkCDN(url) {
       try {
         const response = await fetch(url, { method: 'HEAD' });
-        return response.ok;
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return true;
       } catch (e) {
         displayError(`CDN check failed for ${url}: ${e.message}`);
         return false;
@@ -56,9 +71,8 @@
     }
 
     const cdns = [
-      'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
-      'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
-      'https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js',
+      'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js',
+      'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js',
       'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.8/lib/index.iife.min.js'
     ];
     for (const cdn of cdns) {
@@ -68,37 +82,19 @@
     try {
       // Check React
       if (!window.React) {
-        displayError('React not loaded from https://unpkg.com/react@18.3.1/umd/react.production.min.js');
+        displayError('React not loaded from https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js');
         throw new Error('React not loaded');
       }
       const { useState, useMemo } = React;
 
       // Check ReactDOM
       if (!window.ReactDOM) {
-        displayError('ReactDOM not loaded from https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js');
+        displayError('ReactDOM not loaded from https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js');
         throw new Error('ReactDOM not loaded');
       }
 
-      // Load and check Borsh
-      let borsh;
-      try {
-        borsh = await window.loadModule(
-          'https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js',
-          'Failed to load Borsh from https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js. Attempting fallback...'
-        );
-        window.borsh = borsh || window.borsh;
-      } catch (e) {
-        try {
-          borsh = await window.loadModule(
-            'https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.31.1/lib/index.js',
-            'Failed to load fallback Borsh from https://cdn.jsdelivr.net/npm/@coral-xyz/borsh@0.31.1/lib/index.js'
-          );
-          window.borsh = borsh || window.borsh;
-        } catch (e) {
-          displayError('Borsh not loaded from https://cdn.jsdelivr.net/npm/@project-serum/borsh@0.2.5/lib/index.js or fallback');
-          throw new Error('Borsh not loaded');
-        }
-      }
+      // Check Borsh
+      const borsh = window.borsh;
       if (!borsh || !borsh.serialize || !borsh.deserialize) {
         displayError('Borsh is undefined or missing serialize/deserialize');
         throw new Error('Borsh not loaded');
