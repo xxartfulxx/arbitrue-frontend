@@ -34,7 +34,7 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js" onerror="handleScriptError('Failed to load js-sha3 from https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js'); window.jsSha3 = { keccak_256: input => { console.warn('Mock keccak_256 used'); return new Uint8Array(32).fill(0); } };"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js" onerror="handleScriptError('Failed to load uuid from https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js');"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js" onerror="handleScriptError('Failed to load assert from https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js');"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/dist/assert.js" onerror="handleScriptError('Failed to load assert from https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/dist/assert.js');"></script>
   <script>
     window.addEventListener('load', () => {
       console.log('UUID initialized:', window.uuid, window.uuid.v4, typeof window.uuid.v4);
@@ -134,7 +134,7 @@
         'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.78.0/lib/index.iife.min.js',
         'https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js',
         'https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js',
-        'https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/build/assert.js',
+        'https://cdn.jsdelivr.net/npm/browser-assert@1.2.1/dist/assert.js',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.0/+esm',
         'https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react-ui@0.9.0/+esm'
       ];
@@ -203,6 +203,17 @@
         throw new Error('Buffer not loaded');
       }
       window.Buffer = Buffer;
+
+      // Validate assert module
+      if (!window.assert || typeof window.assert.ok !== 'function' || typeof window.assert.strictEqual !== 'function') {
+        console.warn('assert module incomplete, using fallback');
+        window.assert = {
+          ok: (condition, message) => { if (!condition) throw new Error(message || 'Assertion failed'); },
+          strictEqual: (actual, expected, message) => { if (actual !== expected) throw new Error(message || `Expected ${expected}, but got ${actual}`); },
+          assert: (condition, message) => { if (!condition) throw new Error(message || 'Assertion failed'); }
+        };
+      }
+      console.log('assert validated:', window.assert, window.assert.ok, window.assert.strictEqual, typeof window.assert);
 
       // Load wallet-adapter with retry
       console.log('Before wallet-adapter import');
