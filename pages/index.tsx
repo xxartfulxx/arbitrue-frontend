@@ -39,7 +39,7 @@ export default function Home() {
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature);
       setStatus('Initialization successful');
-    } catch (error) {
+    } catch (error: Error) {
       console.error(error);
       setStatus(`Error: ${error.message}`);
     }
@@ -78,7 +78,7 @@ export default function Home() {
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature);
       setStatus('User account created');
-    } catch (error) {
+    } catch (error: Error) {
       console.error(error);
       setStatus(`Error: ${error.message}`);
     }
