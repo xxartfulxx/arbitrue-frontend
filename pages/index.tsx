@@ -39,9 +39,10 @@ export default function Home() {
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature);
       setStatus('Initialization successful');
-    } catch (error: Error) {
+    } catch (error: unknown) {
       console.error(error);
-      setStatus(`Error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setStatus(`Error: ${errorMessage}`);
     }
   };
 
@@ -78,9 +79,10 @@ export default function Home() {
       const signature = await sendTransaction(transaction, connection);
       await connection.confirmTransaction(signature);
       setStatus('User account created');
-    } catch (error: Error) {
+    } catch (error: unknown) {
       console.error(error);
-      setStatus(`Error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setStatus(`Error: ${errorMessage}`);
     }
   };
 
