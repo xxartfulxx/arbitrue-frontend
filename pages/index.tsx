@@ -1,56 +1,43 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
-import { Program, AnchorProvider, web3 } from '@project-serum/anchor';
+import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 import idl from '../../idl/arbitrue.json';
 
 const PROGRAM_ID = new PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7');
 
 export default function Home() {
-  const { publicKey, sendTransaction, signTransaction } = useWallet();
+  const { publicKey, sendTransaction, connected } = useWallet();
   const [selfieHash, setSelfieHash] = useState('');
   const [status, setStatus] = useState('');
 
-  const getProvider = () => {
-    if (!publicKey || !signTransaction || !sendTransaction) return null;
-    const connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
-    const wallet = {
-      publicKey,
-      signTransaction,
-      signAllTransactions: async (txs: Transaction[]) => {
-        return await Promise.all(txs.map((tx) => signTransaction(tx)));
-      },
-    };
-    return new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
-  };
-
   const initialize = async () => {
-    const provider = getProvider();
-    if (!provider) {
+    if (!publicKey) {
       setStatus('Please connect your wallet');
       return;
     }
 
-    const program = new Program(idl, PROGRAM_ID, provider);
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const [globalPda] = PublicKey.findProgramAddressSync([Buffer.from('global')], PROGRAM_ID);
     const [feeWalletPda] = PublicKey.findProgramAddressSync([Buffer.from('fee_wallet')], PROGRAM_ID);
 
     try {
-      const tx = await program.methods
-        .initialize()
-        .accounts({
-          globalPda,
-          payer: publicKey,
-          usdcMint: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), // USDC mint (devnet)
-          feeWalletPda,
-          systemProgram: SystemProgram.programId,
-          rent: web3.SYSVAR_RENT_PUBKEY,
-        })
-        .transaction();
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: globalPda, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), isSigner: false, isWritable: false }, // USDC mint (devnet)
+          { pubkey: feeWalletPda, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: web3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: Buffer.from([0]), // Assuming instruction discriminator 0 for initialize
+      });
 
-      const signature = await sendTransaction(tx, provider.connection);
-      await provider.connection.confirmTransaction(signature);
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature);
       setStatus('Initialization successful');
     } catch (error) {
       console.error(error);
@@ -59,13 +46,12 @@ export default function Home() {
   };
 
   const createUserAccount = async () => {
-    const provider = getProvider();
-    if (!provider || !selfieHash) {
+    if (!publicKey || !selfieHash) {
       setStatus('Please connect wallet and provide selfie hash');
       return;
     }
 
-    const program = new Program(idl, PROGRAM_ID, provider);
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const [userPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('user'), publicKey.toBuffer()],
       PROGRAM_ID
@@ -75,20 +61,22 @@ export default function Home() {
       const selfieHashArray = Buffer.from(selfieHash, 'hex');
       if (selfieHashArray.length !== 32) throw new Error('Invalid selfie hash');
 
-      const tx = await program.methods
-        .createUserAccount([...selfieHashArray])
-        .accounts({
-          userPda,
-          owner: publicKey,
-          usdcMint: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-          tokenProgram: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
-          systemProgram: SystemProgram.programId,
-          rent: web3.SYSVAR_RENT_PUBKEY,
-        })
-        .transaction();
+      const instruction = new TransactionInstruction({
+        keys: [
+          { pubkey: userPda, isSigner: false, isWritable: true },
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), isSigner: false, isWritable: false },
+          { pubkey: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'), isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: web3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+        ],
+        programId: PROGRAM_ID,
+        data: Buffer.concat([Buffer.from([1]), Buffer.from(selfieHashArray)]), // Discriminator 1 for createUserAccount
+      });
 
-      const signature = await sendTransaction(tx, provider.connection);
-      await provider.connection.confirmTransaction(signature);
+      const transaction = new Transaction().add(instruction);
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature);
       setStatus('User account created');
     } catch (error) {
       console.error(error);
