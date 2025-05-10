@@ -5,7 +5,7 @@ import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
 import idl from '../idl/arbitrue.json';
 
-const PROGRAM_ID = new PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7'); // Replace with your deployed program ID
+const PROGRAM_ID = new PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7'); // deployed program ID
 
 export default function Home() {
   const { publicKey, sendTransaction, connected } = useWallet();
