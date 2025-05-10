@@ -1,21 +1,28 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PublicKey, SystemProgram } from '@solana/web3.js';
-import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
-import idl from '../idl/arbitrue.json';
+import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { Program, AnchorProvider, web3 } from '@project-serum/anchor';
+import idl from '../../idl/arbitrue.json';
 
 const PROGRAM_ID = new PublicKey('7No7JduA1my3piwiNmZeojiixPojTVyfpEdv19AbJNe7'); // deployed program ID
 
 export default function Home() {
-  const { publicKey, sendTransaction, connected } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const [selfieHash, setSelfieHash] = useState('');
   const [status, setStatus] = useState('');
 
   const getProvider = () => {
-    if (!publicKey || !sendTransaction) return null;
+    if (!publicKey || !signTransaction || !sendTransaction) return null;
     const connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
-    return new AnchorProvider(connection, { publicKey, signTransaction: sendTransaction }, { commitment: 'confirmed' });
+    const wallet = {
+      publicKey,
+      signTransaction,
+      signAllTransactions: async (txs: Transaction[]) => {
+        return await Promise.all(txs.map((tx) => signTransaction(tx)));
+      },
+    };
+    return new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
   };
 
   const initialize = async () => {
