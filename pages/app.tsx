@@ -1,28 +1,32 @@
+import { AppProps } from 'next/app';
+import { FC } from 'react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { clusterApiUrl } from '@solana/web3.js';
-import { useMemo } from 'react';
-import type { AppProps } from 'next/app';
-import '@solana/wallet-adapter-react-ui/styles.css';
 import '../styles/globals.css';
 
-export default function App({ Component, pageProps }: AppProps) {
+// Default styles for wallet modal
+import '@solana/wallet-adapter-react-ui/styles.css';
+
+const WalletConnectionProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    []
-  );
+  const wallets = [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+  ];
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <Component {...pageProps} />
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <WalletProvider wallets={wallets} autoConnect>
+      <WalletModalProvider>{children}</WalletModalProvider>
+    </WalletProvider>
+  );
+};
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <WalletConnectionProvider>
+      <Component {...pageProps} />
+    </WalletConnectionProvider>
   );
 }
