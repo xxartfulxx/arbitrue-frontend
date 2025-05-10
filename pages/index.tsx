@@ -10,6 +10,7 @@ export default function Home() {
   const { publicKey, sendTransaction, connected } = useWallet();
   const [selfieHash, setSelfieHash] = useState('');
   const [status, setStatus] = useState('');
+  const [txSignature, setTxSignature] = useState('');
 
   const initialize = async () => {
     if (!publicKey) {
@@ -32,17 +33,19 @@ export default function Home() {
           { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
         ],
         programId: PROGRAM_ID,
-        data: Buffer.from([0]), // Assuming instruction discriminator 0 for initialize
+        data: Buffer.from([0]), // Placeholder; replace with correct discriminator
       });
 
       const transaction = new Transaction().add(instruction);
       const signature = await sendTransaction(transaction, connection);
+      setTxSignature(signature);
       await connection.confirmTransaction(signature);
-      setStatus('Initialization successful');
+      setStatus('Initialization successful! Check transaction on Solana Explorer.');
     } catch (error: unknown) {
       console.error(error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Unexpected error during initialization';
       setStatus(`Error: ${errorMessage}`);
+      setTxSignature('');
     }
   };
 
@@ -72,23 +75,29 @@ export default function Home() {
           { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
         ],
         programId: PROGRAM_ID,
-        data: Buffer.concat([Buffer.from([1]), Buffer.from(selfieHashArray)]), // Discriminator 1 for createUserAccount
+        data: Buffer.concat([Buffer.from([1]), Buffer.from(selfieHashArray)]), // Placeholder; replace with correct discriminator
       });
 
       const transaction = new Transaction().add(instruction);
       const signature = await sendTransaction(transaction, connection);
+      setTxSignature(signature);
       await connection.confirmTransaction(signature);
-      setStatus('User account created');
+      setStatus('User account created! Check transaction on Solana Explorer.');
     } catch (error: unknown) {
       console.error(error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Unexpected error during account creation';
       setStatus(`Error: ${errorMessage}`);
+      setTxSignature('');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
       <h1 className="text-3xl font-bold mb-6">Arbitrue Escrow DApp</h1>
+      <p className="text-center text-gray-600 mb-4">
+        Welcome to Arbitrue, a Solana-based escrow service for secure USDC transactions.
+        Initialize the program to set up the escrow system, then create a user account to participate.
+      </p>
       <WalletMultiButton />
       {connected && (
         <div className="w-full max-w-md">
@@ -99,6 +108,9 @@ export default function Home() {
             >
               Initialize Program
             </button>
+            <p className="text-sm text-gray-600 mt-2">
+              Sets up the escrow program for secure transactions.
+            </p>
           </div>
           <div className="mb-4">
             <input
@@ -108,6 +120,9 @@ export default function Home() {
               onChange={(e) => setSelfieHash(e.target.value)}
               className="w-full p-2 border rounded mb-2"
             />
+            <p className="text-sm text-gray-600 mb-2">
+              Enter a 32-byte hex hash to identify your account.
+            </p>
             <button
               onClick={createUserAccount}
               className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
@@ -115,7 +130,24 @@ export default function Home() {
               Create User Account
             </button>
           </div>
-          <p className="text-red-500">{status}</p>
+          {status && (
+            <p className="text-red-500">
+              {status}
+              {txSignature && (
+                <span>
+                  {' '}
+                  <a
+                    href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    View Transaction
+                  </a>
+                </span>
+              )}
+            </p>
+          )}
         </div>
       )}
     </div>
